@@ -5,7 +5,7 @@ import {
   UtensilsCrossed, Baby, ShoppingBasket, Coffee, Car, Stethoscope,
   Clapperboard, MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
-  Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
+  Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut, Wifi,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc,
@@ -29,12 +29,13 @@ const CATS = {
   교통: { color: "#3E9BD6", Icon: Car },
   의료: { color: "#16A06A", Icon: Stethoscope },
   문화: { color: "#6C5CE7", Icon: Clapperboard },
+  통신: { color: "#0EA5E9", Icon: Wifi },
   기타: { color: "#9AA5A0", Icon: MoreHorizontal },
   급여: { color: "#16A06A", Icon: Banknote },
   부수입: { color: "#3568C9", Icon: TrendingUp },
   기타수입: { color: "#9AA5A0", Icon: MoreHorizontal },
 };
-const EXPENSE_CATS = ["식비", "육아", "생활용품", "외식/카페", "교통", "의료", "문화", "기타"];
+const EXPENSE_CATS = ["식비", "육아", "생활용품", "외식/카페", "교통", "의료", "문화", "통신", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
 const KINDS = { 예금: { color: "#16A06A", Icon: Landmark }, 적금: { color: "#F2A33C", Icon: PiggyBank }, 주식: { color: "#3568C9", Icon: LineChart } };
 
@@ -119,6 +120,7 @@ function QuickAddBar({ onSave, onDetail }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("식비");
   const [type, setType] = useState("expense");
+  const [fixed, setFixed] = useState(false);
   const inputRef = useRef(null);
 
   const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
@@ -131,7 +133,7 @@ function QuickAddBar({ onSave, onDetail }) {
     const n = Number(amount);
     if (!n) return;
     const today = new Date();
-    onSave({ type, cat, amount: n, month: today.getMonth() + 1, day: today.getDate(), year: today.getFullYear(), who: "종현", memo: "", fixed: false });
+    onSave({ type, cat, amount: n, month: today.getMonth() + 1, day: today.getDate(), year: today.getFullYear(), who: "종현", memo: "", fixed });
     setAmount("");
     inputRef.current?.blur();
   };
@@ -160,10 +162,11 @@ function QuickAddBar({ onSave, onDetail }) {
       </div>
       {/* 지출/수입 + 금액 + 저장 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* 지출/수입 세로 토글 */}
+        {/* 지출/수입/고정 세로 버튼 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
           <button onClick={() => setType("expense")} style={{ border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, background: type === "expense" ? C.moneyOut : C.soft, color: type === "expense" ? "#fff" : C.sub }}>지출</button>
           <button onClick={() => setType("income")} style={{ border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, background: type === "income" ? C.moneyIn : C.soft, color: type === "income" ? "#fff" : C.sub }}>수입</button>
+          <button onClick={() => setFixed((f) => !f)} style={{ border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, background: fixed ? "#7E8A83" : C.soft, color: fixed ? "#fff" : C.sub }}>고정</button>
         </div>
         {/* 금액 입력 */}
         <input
