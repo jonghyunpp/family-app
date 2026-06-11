@@ -14,7 +14,7 @@ const firebaseConfig = {
 // ✅ 두 사람의 Google 이메일 주소를 여기에 입력하세요
 export const ALLOWED_EMAILS = [
   "pjhbse@gmail.com",   // 종현 (Firebase 프로젝트 소유자 이메일)
-  "",                    // ← 성은 구글 이메일 추가 필요
+  "hn5620@gmail.com",   // 성은
 ];
 
 const app = initializeApp(firebaseConfig);
