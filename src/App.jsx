@@ -11,8 +11,8 @@ import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc,
   query, orderBy, serverTimestamp,
 } from "firebase/firestore";
-import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { auth, db, googleProvider, ALLOWED_EMAILS } from "./firebase.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { auth, db, USERS } from "./firebase.js";
 
 // ──────── 디자인 토큰 ────────
 const C = {
@@ -679,18 +679,73 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
   );
 }
 
-// ──────── 로그인 화면 ────────
+// ──────── 로그인 화면 (PIN 방식) ────────
 function LoginScreen({ onLogin, loading, error }) {
+  const [who, setWho] = useState(null); // "종현" | "성은"
+  const [pin, setPin] = useState("");
+
+  // 에러 나면 PIN 리셋
+  useEffect(() => { if (error) setPin(""); }, [error]);
+
+  const handleNum = (n) => {
+    if (loading || pin.length >= 6) return;
+    const next = pin + n;
+    setPin(next);
+    if (next.length === 6) {
+      setTimeout(() => onLogin(who, next), 80);
+    }
+  };
+  const handleDel = () => { if (!loading) setPin((p) => p.slice(0, -1)); };
+  const handleBack = () => { setWho(null); setPin(""); };
+
   return (
     <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🏠</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: C.ink, marginBottom: 8 }}>우리집</div>
-      <div style={{ fontSize: 14, color: C.sub, marginBottom: 48, textAlign: "center" }}>가계부 · 일정 · 할일<br />두 사람만의 가족 앱</div>
-      {error && <div style={{ fontSize: 13, color: C.expense, marginBottom: 16, textAlign: "center" }}>{error}</div>}
-      <button onClick={onLogin} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: font, boxShadow: "0 2px 8px rgba(16,29,23,0.08)", color: C.ink }}>
-        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        {loading ? "로그인 중..." : "Google로 로그인"}
-      </button>
+      <div style={{ fontSize: 52, marginBottom: 12 }}>🏠</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: C.ink, marginBottom: 4 }}>우리집</div>
+      <div style={{ fontSize: 13, color: C.sub, marginBottom: 40 }}>가계부 · 일정 · 할일</div>
+
+      {!who ? (
+        // 이름 선택
+        <div style={{ width: "100%", maxWidth: 280 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.sub, textAlign: "center", marginBottom: 16 }}>누구세요?</div>
+          <div style={{ display: "flex", gap: 12 }}>
+            {Object.keys(USERS).map((name) => (
+              <button key={name} onClick={() => setWho(name)} style={{ flex: 1, padding: "20px 0", borderRadius: 18, border: `2px solid ${WHO[name]}`, background: WHO[name] + "12", color: WHO[name], fontSize: 18, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        // PIN 입력
+        <div style={{ width: "100%", maxWidth: 280 }}>
+          <button onClick={handleBack} style={{ background: "none", border: "none", color: C.sub, fontSize: 13, cursor: "pointer", marginBottom: 16, fontFamily: font, display: "flex", alignItems: "center", gap: 4 }}>
+            ← 다시 선택
+          </button>
+          <div style={{ fontSize: 15, fontWeight: 700, color: WHO[who], textAlign: "center", marginBottom: 24 }}>{who}의 PIN 입력</div>
+
+          {/* PIN 점 표시 */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 32 }}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} style={{ width: 14, height: 14, borderRadius: 7, background: i < pin.length ? WHO[who] : C.line, transition: "background .15s" }} />
+            ))}
+          </div>
+
+          {error && <div style={{ fontSize: 12, color: C.expense, textAlign: "center", marginBottom: 16 }}>{error}</div>}
+          {loading && <div style={{ fontSize: 12, color: C.sub, textAlign: "center", marginBottom: 16 }}>확인 중...</div>}
+
+          {/* 숫자 키패드 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k, i) => (
+              <button key={i} onClick={() => k === "⌫" ? handleDel() : k !== "" ? handleNum(String(k)) : null}
+                disabled={loading || k === ""}
+                style={{ padding: "18px 0", borderRadius: 14, border: `1.5px solid ${C.line}`, background: k === "⌫" ? C.soft : "#fff", fontSize: k === "⌫" ? 20 : 22, fontWeight: 600, cursor: k === "" ? "default" : "pointer", fontFamily: font, color: k === "" ? "transparent" : C.ink, opacity: loading ? 0.5 : 1 }}>
+                {k}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -700,6 +755,7 @@ export default function App() {
   const [user, setUser] = useState(undefined); // undefined=로딩, null=비로그인
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginWho, setLoginWho] = useState(null);
 
   // Firebase 데이터
   const [txs, setTxs] = useState([]);
@@ -732,20 +788,15 @@ export default function App() {
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  const handleLogin = async () => {
-    setLoginLoading(true); setLoginError("");
+  const handleLogin = async (who, pin) => {
+    if (!who || !pin) return;
+    setLoginLoading(true); setLoginError(""); setLoginWho(who);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const email = result.user.email;
-      const allowed = ALLOWED_EMAILS.filter(Boolean);
-      if (allowed.length > 0 && !allowed.includes(email)) {
-        await signOut(auth);
-        setLoginError("접근이 허용되지 않은 계정이에요.\n종현 또는 성은의 구글 계정으로 로그인해주세요.");
-      }
+      await signInWithEmailAndPassword(auth, USERS[who], pin);
     } catch (e) {
-      if (e.code !== "auth/popup-closed-by-user") setLoginError("로그인 중 오류가 발생했어요.");
+      setLoginError("PIN이 맞지 않아요. 다시 입력해주세요.");
+      setLoginLoading(false); setLoginWho(null);
     }
-    setLoginLoading(false);
   };
 
   // ── Firestore 실시간 구독 ──
@@ -858,7 +909,7 @@ export default function App() {
     return <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontSize: 14 }}>로딩 중...</div>;
   }
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} />;
+    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} who={loginWho} />;
   }
 
   const modes = [["money", "가계부", Coins], ["schedule", "일정", CalendarHeart], ["todo", "할일", ListChecks]];
