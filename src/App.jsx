@@ -358,6 +358,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
 
 // ──────── 가계부: 자산 ────────
 function Assets({ assets, onAdd, onDelete }) {
+  const [showAdd, setShowAdd] = useState(false);
   const total = assets.reduce((s, a) => s + a.amount, 0);
   const byKind = Object.entries(KINDS).map(([k]) => ({ kind: k, total: assets.filter((a) => a.kind === k).reduce((s, a) => s + a.amount, 0) })).filter((x) => x.total > 0);
   return (
@@ -375,7 +376,10 @@ function Assets({ assets, onAdd, onDelete }) {
         })}
       </div>
       <div style={card}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>계좌 목록</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>계좌 목록</div>
+          <button onClick={() => setShowAdd(true)} style={{ border: "none", background: C.soft, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}><Plus size={13} />추가</button>
+        </div>
         {assets.length === 0 && <div style={{ fontSize: 13, color: C.sub, textAlign: "center", padding: "20px 0" }}>자산을 추가해보세요</div>}
         {assets.map((a) => {
           const { color, Icon } = KINDS[a.kind] || KINDS["예금"];
@@ -389,11 +393,57 @@ function Assets({ assets, onAdd, onDelete }) {
                 <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{a.kind}{a.monthly ? ` · 월 ${fmt(a.monthly)}` : ""}</div>
               </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.asset }}>{fmt(a.amount)}</div>
+              <button onClick={() => onDelete(a.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#CFD6D1" }}><Trash2 size={15} /></button>
             </div>
           );
         })}
       </div>
+      {showAdd && (
+        <AddAssetSheet onClose={() => setShowAdd(false)} onSave={(a) => { onAdd(a); setShowAdd(false); }} />
+      )}
     </div>
+  );
+}
+
+// ──────── 시트: 자산 추가 ────────
+function AddAssetSheet({ onClose, onSave }) {
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState("예금");
+  const [amount, setAmount] = useState("");
+  const [monthly, setMonthly] = useState("");
+  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff" };
+  return (
+    <Sheet onClose={onClose} title="자산 추가">
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>계좌/자산명</div>
+        <input style={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 국민은행 통장" />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>종류</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {Object.keys(KINDS).map((k) => {
+            const { color } = KINDS[k];
+            return (
+              <button key={k} onClick={() => setKind(k)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${kind === k ? color : C.line}`, background: kind === k ? color + "14" : "#fff", color: kind === k ? color : C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>{k}</button>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>잔액 / 평가금액</div>
+        <input style={input} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="금액" />
+      </div>
+      {(kind === "적금") && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>월 납입액 (선택)</div>
+          <input style={input} type="number" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="월 납입금액" />
+        </div>
+      )}
+      <button onClick={() => name && amount && onSave({ name, kind, amount: Number(amount), monthly: monthly ? Number(monthly) : 0 })}
+        style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
+        추가
+      </button>
+    </Sheet>
   );
 }
 
@@ -681,22 +731,17 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
 
 // ──────── 로그인 화면 (PIN 방식) ────────
 function LoginScreen({ onLogin, loading, error }) {
-  const [who, setWho] = useState(null); // "종현" | "성은"
   const [pin, setPin] = useState("");
 
-  // 에러 나면 PIN 리셋
   useEffect(() => { if (error) setPin(""); }, [error]);
 
   const handleNum = (n) => {
     if (loading || pin.length >= 6) return;
     const next = pin + n;
     setPin(next);
-    if (next.length === 6) {
-      setTimeout(() => onLogin(who, next), 80);
-    }
+    if (next.length === 6) setTimeout(() => onLogin(next), 80);
   };
   const handleDel = () => { if (!loading) setPin((p) => p.slice(0, -1)); };
-  const handleBack = () => { setWho(null); setPin(""); };
 
   return (
     <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -704,48 +749,28 @@ function LoginScreen({ onLogin, loading, error }) {
       <div style={{ fontSize: 26, fontWeight: 800, color: C.ink, marginBottom: 4 }}>우리집</div>
       <div style={{ fontSize: 13, color: C.sub, marginBottom: 40 }}>가계부 · 일정 · 할일</div>
 
-      {!who ? (
-        // 이름 선택
-        <div style={{ width: "100%", maxWidth: 280 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.sub, textAlign: "center", marginBottom: 16 }}>누구세요?</div>
-          <div style={{ display: "flex", gap: 12 }}>
-            {Object.keys(USERS).map((name) => (
-              <button key={name} onClick={() => setWho(name)} style={{ flex: 1, padding: "20px 0", borderRadius: 18, border: `2px solid ${WHO[name]}`, background: WHO[name] + "12", color: WHO[name], fontSize: 18, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
-                {name}
-              </button>
-            ))}
-          </div>
+      <div style={{ width: "100%", maxWidth: 280 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.sub, textAlign: "center", marginBottom: 24 }}>비밀번호 입력</div>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 32 }}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} style={{ width: 14, height: 14, borderRadius: 7, background: i < pin.length ? C.ink : C.line, transition: "background .15s" }} />
+          ))}
         </div>
-      ) : (
-        // PIN 입력
-        <div style={{ width: "100%", maxWidth: 280 }}>
-          <button onClick={handleBack} style={{ background: "none", border: "none", color: C.sub, fontSize: 13, cursor: "pointer", marginBottom: 16, fontFamily: font, display: "flex", alignItems: "center", gap: 4 }}>
-            ← 다시 선택
-          </button>
-          <div style={{ fontSize: 15, fontWeight: 700, color: WHO[who], textAlign: "center", marginBottom: 24 }}>{who}의 PIN 입력</div>
 
-          {/* PIN 점 표시 */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 32 }}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} style={{ width: 14, height: 14, borderRadius: 7, background: i < pin.length ? WHO[who] : C.line, transition: "background .15s" }} />
-            ))}
-          </div>
+        {error && <div style={{ fontSize: 12, color: C.expense, textAlign: "center", marginBottom: 16 }}>{error}</div>}
+        {loading && <div style={{ fontSize: 12, color: C.sub, textAlign: "center", marginBottom: 16 }}>확인 중...</div>}
 
-          {error && <div style={{ fontSize: 12, color: C.expense, textAlign: "center", marginBottom: 16 }}>{error}</div>}
-          {loading && <div style={{ fontSize: 12, color: C.sub, textAlign: "center", marginBottom: 16 }}>확인 중...</div>}
-
-          {/* 숫자 키패드 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-            {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k, i) => (
-              <button key={i} onClick={() => k === "⌫" ? handleDel() : k !== "" ? handleNum(String(k)) : null}
-                disabled={loading || k === ""}
-                style={{ padding: "18px 0", borderRadius: 14, border: `1.5px solid ${C.line}`, background: k === "⌫" ? C.soft : "#fff", fontSize: k === "⌫" ? 20 : 22, fontWeight: 600, cursor: k === "" ? "default" : "pointer", fontFamily: font, color: k === "" ? "transparent" : C.ink, opacity: loading ? 0.5 : 1 }}>
-                {k}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+          {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k, i) => (
+            <button key={i} onClick={() => k === "⌫" ? handleDel() : k !== "" ? handleNum(String(k)) : null}
+              disabled={loading || k === ""}
+              style={{ padding: "18px 0", borderRadius: 14, border: `1.5px solid ${C.line}`, background: k === "⌫" ? C.soft : "#fff", fontSize: k === "⌫" ? 20 : 22, fontWeight: 600, cursor: k === "" ? "default" : "pointer", fontFamily: font, color: k === "" ? "transparent" : C.ink, opacity: loading ? 0.5 : 1 }}>
+              {k}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -788,14 +813,14 @@ export default function App() {
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  const handleLogin = async (who, pin) => {
-    if (!who || !pin) return;
-    setLoginLoading(true); setLoginError(""); setLoginWho(who);
+  const handleLogin = async (pin) => {
+    if (!pin) return;
+    setLoginLoading(true); setLoginError("");
     try {
-      await signInWithEmailAndPassword(auth, USERS[who], pin);
+      await signInWithEmailAndPassword(auth, USERS["종현"], pin);
     } catch (e) {
-      setLoginError("PIN이 맞지 않아요. 다시 입력해주세요.");
-      setLoginLoading(false); setLoginWho(null);
+      setLoginError("비밀번호가 맞지 않아요.");
+      setLoginLoading(false);
     }
   };
 
@@ -864,6 +889,13 @@ export default function App() {
   }, []);
   const deleteRecurring = useCallback(async (id) => {
     await deleteDoc(doc(db, "recurring", id));
+  }, []);
+
+  const addAsset = useCallback(async (a) => {
+    await addDoc(collection(db, "assets"), { ...a, createdAt: serverTimestamp() });
+  }, []);
+  const deleteAsset = useCallback(async (id) => {
+    await deleteDoc(doc(db, "assets", id));
   }, []);
 
   const saveBudget = useCallback(async (amount) => {
@@ -941,14 +973,14 @@ export default function App() {
             {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} month={month} setMonth={setMonth} onTx={openTx} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} />}
-            {tab === "asset" && <Assets assets={assets} />}
+            {tab === "asset" && <Assets assets={assets} onAdd={addAsset} onDelete={deleteAsset} />}
           </>
         )}
         {mode === "schedule" && <Schedule events={events} month={month} year={year} setMonth={setMonth} onJump={jumpTo} onEdit={setEditEvent} onDelete={deleteEvent} />}
         {mode === "todo" && <Todos todos={todos} onToggle={(id) => { const t = todos.find((x) => x.id === id); if (t) toggleTodo(id, t.done); }} onAdd={addTodo} onDelete={deleteTodo} />}
       </div>
 
-      {(mode === "money" || mode === "schedule") && (
+      {((mode === "money" && (tab === "home" || tab === "cal")) || mode === "schedule") && (
         <button onClick={() => setShowAdd(true)} aria-label="추가" style={{ position: "fixed", bottom: mode === "money" ? 92 : 30, right: "max(18px, calc(50% - 222px))", width: 54, height: 54, borderRadius: 27, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20 }}>
           <Plus size={26} />
         </button>
