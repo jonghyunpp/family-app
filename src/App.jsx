@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Home as HomeIcon, CalendarDays, PieChart as ChartPie, Target, Wallet, Plus,
@@ -114,6 +114,69 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
     </>
   );
 }
+// ──────── 빠른 입력 바 ────────
+function QuickAddBar({ onSave }) {
+  const [amount, setAmount] = useState("");
+  const [cat, setCat] = useState("식비");
+  const [type, setType] = useState("expense");
+  const inputRef = useRef(null);
+
+  const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
+
+  useEffect(() => {
+    setCat(type === "expense" ? "식비" : "급여");
+  }, [type]);
+
+  const handleSave = () => {
+    const n = Number(amount);
+    if (!n) return;
+    const today = new Date();
+    onSave({
+      type, cat, amount: n,
+      month: today.getMonth() + 1,
+      day: today.getDate(),
+      year: today.getFullYear(),
+      who: "종현", memo: "", fixed: false,
+    });
+    setAmount("");
+    inputRef.current?.blur();
+  };
+
+  const accentColor = type === "expense" ? C.moneyOut : C.moneyIn;
+  const pill = { border: "none", borderRadius: 16, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: font, transition: "all .15s" };
+
+  return (
+    <div style={{ position: "fixed", bottom: 64, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "10px 14px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
+      {/* 카테고리 */}
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", marginBottom: 8, WebkitOverflowScrolling: "touch" }}>
+        {cats.map((c) => {
+          const { color, Icon } = CATS[c];
+          const sel = cat === c;
+          return (
+            <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4, border: `1.5px solid ${sel ? color : C.line}`, borderRadius: 20, padding: "5px 10px", background: sel ? color + "14" : "#fff", color: sel ? color : C.sub, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: font }}>
+              <Icon size={12} strokeWidth={2.2} />{c}
+            </button>
+          );
+        })}
+      </div>
+      {/* 입력 행 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <button onClick={() => setType("expense")} style={{ ...pill, background: type === "expense" ? C.moneyOut : C.soft, color: type === "expense" ? "#fff" : C.sub }}>지출</button>
+        <button onClick={() => setType("income")} style={{ ...pill, background: type === "income" ? C.moneyIn : C.soft, color: type === "income" ? "#fff" : C.sub }}>수입</button>
+        <input
+          ref={inputRef} type="number" inputMode="decimal" value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          placeholder="금액"
+          style={{ flex: 1, border: "none", borderBottom: `2px solid ${accentColor}`, fontSize: 19, fontWeight: 800, padding: "3px 0", textAlign: "right", fontFamily: font, background: "none", color: C.ink, outline: "none" }}
+        />
+        <span style={{ fontSize: 13, fontWeight: 600, color: C.sub, flexShrink: 0 }}>원</span>
+        <button onClick={handleSave} disabled={!amount} style={{ border: "none", borderRadius: 10, background: amount ? C.ink : C.line, color: amount ? "#fff" : C.sub, padding: "9px 16px", fontWeight: 800, fontSize: 14, cursor: amount ? "pointer" : "default", fontFamily: font, flexShrink: 0 }}>저장</button>
+      </div>
+    </div>
+  );
+}
+
 function Sheet({ onClose, children, title }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -966,7 +1029,7 @@ export default function App() {
         </button>
       </div>
 
-      <div style={{ padding: "10px 18px 120px" }}>
+      <div style={{ padding: "10px 18px", paddingBottom: mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120 }}>
         {mode === "money" && (
           <>
             {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
@@ -980,9 +1043,13 @@ export default function App() {
         {mode === "todo" && <Todos todos={todos} onToggle={(id) => { const t = todos.find((x) => x.id === id); if (t) toggleTodo(id, t.done); }} onAdd={addTodo} onDelete={deleteTodo} />}
       </div>
 
+      {mode === "money" && (tab === "home" || tab === "cal") && (
+        <QuickAddBar onSave={(t) => addTx(t)} />
+      )}
+
       {((mode === "money" && (tab === "home" || tab === "cal")) || mode === "schedule") && (
-        <button onClick={() => setShowAdd(true)} aria-label="추가" style={{ position: "fixed", bottom: mode === "money" ? 92 : 30, right: "max(18px, calc(50% - 222px))", width: 54, height: 54, borderRadius: 27, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20 }}>
-          <Plus size={26} />
+        <button onClick={() => setShowAdd(true)} aria-label="상세 입력" title="상세 입력" style={{ position: "fixed", bottom: mode === "money" ? 158 : 30, right: "max(18px, calc(50% - 222px))", width: 44, height: 44, borderRadius: 22, border: "none", background: C.soft, color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(16,29,23,0.12)", cursor: "pointer", zIndex: 23 }}>
+          <Plus size={20} />
         </button>
       )}
 
