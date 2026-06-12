@@ -1127,7 +1127,10 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [memo, setMemo] = useState(initial?.memo || "");
   const [who, setWho] = useState(initial?.who || defaultWho);
-  const [day, setDay] = useState(initial?.day || new Date().getDate());
+  const [dateStr, setDateStr] = useState(() => {
+    if (initial) return `${initial.year}-${String(initial.month).padStart(2,"0")}-${String(initial.day||1).padStart(2,"0")}`;
+    return `${year}-${String(month).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`;
+  });
   const [fixed, setFixed] = useState(initial?.fixed || false);
   const [makeFixed, setMakeFixed] = useState(false);
   const [isInstallment, setIsInstallment] = useState(initial?.installment || false);
@@ -1141,9 +1144,10 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
 
   const save = () => {
     if (!amount) return;
-    const t = { type, cat, amount: Number(amount), memo, who, day, month, year, fixed };
+    const [txYear, txMonth, txDay] = dateStr ? dateStr.split("-").map(Number) : [year, month, 1];
+    const t = { type, cat, amount: Number(amount), memo, who, day: txDay, month: txMonth, year: txYear, fixed };
     if (isInstallment) { Object.assign(t, { installment: true, installmentTotal: instTotal, installmentCurrent: instCurrent, fixed: false }); }
-    if (makeFixed && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day, cat, who }); }
+    if (makeFixed && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day: txDay, cat, who }); }
     else { onSave(t); }
   };
   const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
@@ -1160,7 +1164,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>카테고리</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {cats.map((c) => {
-            const { color, bg, Icon } = CATS[c] || CATS["기타"];
+            const { color, bg, Icon } = getCatInfo(c);
             const sel = cat === c;
             return (
               <button key={c} onClick={() => setCat(c)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "10px 6px", borderRadius: 14, border: `2px solid ${sel ? color : "transparent"}`, background: bg, color: sel ? color : C.sub, fontWeight: sel ? 800 : 600, fontSize: 11, cursor: "pointer", fontFamily: font, width: "calc(20% - 5px)", minWidth: 58, boxShadow: sel ? `0 2px 8px ${color}40` : "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -1179,16 +1183,16 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>메모</div>
         <input style={input} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="메모 (선택)" />
       </div>
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>날짜</div>
-          <DaySelect value={day} onChange={setDay} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>담당</div>
-          <select value={who} onChange={(e) => setWho(e.target.value)} style={{ ...input }}>
-            {Object.keys(WHO).map((w) => <option key={w}>{w}</option>)}
-          </select>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>날짜</div>
+        <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={{ ...input, color: C.ink }} />
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>담당</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {Object.keys(WHO).map((w) => (
+            <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 10, padding: "9px 4px", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>{w}</button>
+          ))}
         </div>
       </div>
       {type === "expense" && (
@@ -1242,7 +1246,11 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
 function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDelete }) {
   const isEdit = !!initial;
   const [title, setTitle] = useState(initial?.title || "");
-  const [day, setDay] = useState(initial?.day || defaultDay || new Date().getDate());
+  const [dateStr, setDateStr] = useState(() => {
+    if (initial) return `${initial.year}-${String(initial.month).padStart(2,"0")}-${String(initial.day).padStart(2,"0")}`;
+    const d = defaultDay || new Date().getDate();
+    return `${year}-${String(month).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  });
   const [time, setTime] = useState(initial?.time || "");
   const [place, setPlace] = useState(initial?.place || "");
   const [who, setWho] = useState(initial?.who || "같이");
@@ -1256,7 +1264,7 @@ function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDe
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>날짜</div>
-          <DaySelect value={day} onChange={setDay} />
+          <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={{ ...input, color: C.ink }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>시간</div>
@@ -1275,7 +1283,7 @@ function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDe
           ))}
         </div>
       </div>
-      <button onClick={() => title && onSave({ title, day, time, place, who, month, year })} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
+      <button onClick={() => { if (!title) return; const [evYear, evMonth, evDay] = dateStr ? dateStr.split("-").map(Number) : [year, month, 1]; onSave({ title, day: evDay, time, place, who, month: evMonth, year: evYear }); }} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
         {isEdit ? "수정 완료" : "추가"}
       </button>
       {isEdit && onDelete && (
@@ -1319,7 +1327,7 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>카테고리</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {EXPENSE_CATS.map((c) => {
-            const { color, bg, Icon } = CATS[c] || CATS["기타"];
+            const { color, bg, Icon } = getCatInfo(c);
             const sel = cat === c;
             return (
               <button key={c} onClick={() => setCat(c)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "10px 6px", borderRadius: 14, border: `2px solid ${sel ? color : "transparent"}`, background: bg, color: sel ? color : C.sub, fontWeight: sel ? 800 : 600, fontSize: 11, cursor: "pointer", fontFamily: font, width: "calc(20% - 5px)", minWidth: 58, boxShadow: sel ? `0 2px 8px ${color}40` : "0 1px 3px rgba(0,0,0,0.05)" }}>
