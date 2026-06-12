@@ -362,7 +362,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
   const accentColor = inferredType === "expense" ? C.moneyOut : C.moneyIn;
 
   return (
-    <div style={{ position: "fixed", bottom: "calc(max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px)))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "8px 12px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
+    <div style={{ position: "fixed", bottom: "calc(max(72px, calc(env(safe-area-inset-bottom, 0px) + 64px)))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 456, background: C.card, borderRadius: 20, padding: "10px 14px 12px", zIndex: 22, boxShadow: "0 4px 24px rgba(16,29,23,0.14), 0 1px 4px rgba(16,29,23,0.06)" }}>
       {/* 날짜 표시 (달력 탭에서 날짜 선택 시) */}
       {date && (() => { const [dy, dm, dd] = date.split("-").map(Number); return (
         <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, marginBottom: 5 }}>{dm}월 {dd}일 입력 중</div>
@@ -381,7 +381,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
           })}
         </div>
         {/* 상세 입력 버튼 */}
-        <button onClick={() => onDetail && onDetail(date)} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${C.line}`, background: "#fff", color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <button onClick={() => onDetail && onDetail(date)} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.soft, color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <Plus size={15} strokeWidth={2.5} />
         </button>
       </div>
@@ -1928,7 +1928,7 @@ export default function App() {
       )}
 
       {mode === "money" && (
-        <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: darkMode ? `${C.card}f2` : "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", paddingTop: 8, paddingBottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))", zIndex: 25 }}>
+        <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: darkMode ? `${C.card}f2` : "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", display: "flex", paddingTop: 10, paddingBottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))", zIndex: 25 }}>
           {tabs.map(([k, label, Icon]) => (
             <button key={k} onClick={() => { if (k !== tab) { const n = new Date(); setYear(n.getFullYear()); setMonthRaw(n.getMonth() + 1); } setTab(k); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
               <Icon size={22} strokeWidth={tab === k ? 2.4 : 1.8} style={{ display: "block", margin: "0 auto" }} />
