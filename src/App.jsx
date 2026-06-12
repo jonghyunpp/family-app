@@ -328,7 +328,7 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
   );
 }
 // ──────── 빠른 입력 바 ────────
-function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
+function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("식비");
   const [type, setType] = useState("expense");
@@ -343,8 +343,14 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
   const handleSave = () => {
     const n = Number(amount);
     if (!n) return;
-    const today = new Date();
-    onSave({ type, cat, amount: n, month: today.getMonth() + 1, day: today.getDate(), year: today.getFullYear(), who: defaultWho, memo: "", fixed: false });
+    let dy, mo, yr;
+    if (date) {
+      [yr, mo, dy] = date.split("-").map(Number);
+    } else {
+      const today = new Date();
+      dy = today.getDate(); mo = today.getMonth() + 1; yr = today.getFullYear();
+    }
+    onSave({ type, cat, amount: n, month: mo, day: dy, year: yr, who: defaultWho, memo: "", fixed: false });
     setAmount("");
     inputRef.current?.blur();
   };
@@ -353,6 +359,10 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
 
   return (
     <div style={{ position: "fixed", bottom: "calc(max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px)))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "8px 12px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
+      {/* 날짜 표시 (달력 탭에서 날짜 선택 시) */}
+      {date && (() => { const [dy, dm, dd] = date.split("-").map(Number); return (
+        <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, marginBottom: 5 }}>{dm}월 {dd}일 입력 중</div>
+      ); })()}
       {/* 카테고리 + 상세입력 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", flex: 1, WebkitOverflowScrolling: "touch" }}>
@@ -539,13 +549,17 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
 }
 
 // ──────── 가계부: 달력 ────────
-function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
+function MoneyCalendar({ txs, month, year, setMonth, onTx, sel, onSel, onDetail }) {
   const nowD = new Date();
   const isCurrentMonth = nowD.getMonth() + 1 === month && nowD.getFullYear() === year;
-  const [sel, setSel] = useState(nowD.getDate());
-  // 달이 바뀌면 선택 날짜 초기화
+  // 달이 바뀔 때만 선택 날짜 초기화 (탭 이동 시에는 유지)
+  const prevMonthRef = useRef(`${year}-${month}`);
   useEffect(() => {
-    setSel(isCurrentMonth ? nowD.getDate() : null);
+    const key = `${year}-${month}`;
+    if (prevMonthRef.current !== key) {
+      prevMonthRef.current = key;
+      onSel(isCurrentMonth ? nowD.getDate() : 1);
+    }
   }, [month, year]);
   const byDay = useMemo(() => {
     const m = {};
@@ -560,7 +574,7 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
         <MonthNav month={month} setMonth={setMonth} />
       </header>
       <div style={{ ...card, marginBottom: 16 }}>
-        <MonthGrid month={month} year={year} selected={sel} onSelect={setSel} renderDay={(d, isSel) => {
+        <MonthGrid month={month} year={year} selected={sel} onSelect={onSel} renderDay={(d, isSel) => {
           const info = byDay[d];
           if (!info) return null;
           return (
@@ -571,15 +585,23 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
           );
         }} />
       </div>
-      {dayTxs.length > 0 ? (
+      {sel && (
         <div style={card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 4 }}>{month}월 {sel}일</div>
-          {dayTxs.map((t, i) => (
-            <div key={t.id}>{i > 0 && <div style={{ height: 1, background: C.line }} />}<TxRow t={t} onClick={() => onTx(t)} /></div>
-          ))}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>{month}월 {sel}일</div>
+            <button onClick={() => onDetail(`${year}-${String(month).padStart(2,"0")}-${String(sel).padStart(2,"0")}`)}
+              style={{ display: "flex", alignItems: "center", gap: 4, border: "none", background: C.soft, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: C.ink, fontFamily: font }}>
+              <Plus size={13} />상세 입력
+            </button>
+          </div>
+          {dayTxs.length > 0 ? (
+            dayTxs.map((t, i) => (
+              <div key={t.id}>{i > 0 && <div style={{ height: 1, background: C.line }} />}<TxRow t={t} onClick={() => onTx(t)} /></div>
+            ))
+          ) : (
+            <div style={{ textAlign: "center", padding: "20px 0", color: C.sub, fontSize: 13 }}>내역이 없어요</div>
+          )}
         </div>
-      ) : (
-        <div style={{ ...card, textAlign: "center", padding: "28px 18px", color: C.sub, fontSize: 13 }}>선택한 날에 내역이 없어요</div>
       )}
     </div>
   );
@@ -1188,7 +1210,7 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
 }
 
 // ──────── 시트: 내역 추가/수정 ────────
-function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring }) {
+function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring }) {
   const isEdit = !!initial;
   const [type, setType] = useState(initial?.type || "expense");
   const [cat, setCat] = useState(initial?.cat || "식비");
@@ -1197,6 +1219,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
   const [who, setWho] = useState(initial?.who || defaultWho);
   const [dateStr, setDateStr] = useState(() => {
     if (initial) return `${initial.year}-${String(initial.month).padStart(2,"0")}-${String(initial.day||1).padStart(2,"0")}`;
+    if (initialDate) return initialDate;
     return `${year}-${String(month).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`;
   });
   const [fixed, setFixed] = useState(initial?.fixed || false);
@@ -1511,6 +1534,8 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [addDay, setAddDay] = useState(null); // 일정 추가 시 기본 날짜
+  const [addTxDate, setAddTxDate] = useState(null); // 달력에서 날짜 선택 후 내역 추가
+  const [calSel, setCalSel] = useState(now.getDate()); // 달력에서 선택된 날
   const [editTx, setEditTx] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
   const [editRecur, setEditRecur] = useState(null);
@@ -1755,7 +1780,7 @@ export default function App() {
         {mode === "money" && (
           <>
             {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
-            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
+            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} sel={calSel} onSel={setCalSel} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
             {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
             {tab === "asset" && <Assets assets={assets} txs={txs} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />}
@@ -1767,7 +1792,8 @@ export default function App() {
       </div>
 
       {mode === "money" && (tab === "home" || tab === "cal") && (
-        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={() => setShowAdd(true)} />
+        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={() => setShowAdd(true)}
+          date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null} />
       )}
 
       {mode === "schedule" && (
@@ -1789,9 +1815,10 @@ export default function App() {
 
       {/* 시트들 */}
       {showAdd && mode === "money" && (
-        <AddTxSheet month={month} year={year} defaultWho={currentWho} onClose={() => setShowAdd(false)}
-          onSave={(t) => { addTx(t); setShowAdd(false); }}
-          onSaveRecurring={(r) => { addRecurring(r); setShowAdd(false); }} />
+        <AddTxSheet month={month} year={year} initialDate={addTxDate} defaultWho={currentWho}
+          onClose={() => { setShowAdd(false); setAddTxDate(null); }}
+          onSave={(t) => { addTx(t); setShowAdd(false); setAddTxDate(null); }}
+          onSaveRecurring={(r) => { addRecurring(r); setShowAdd(false); setAddTxDate(null); }} />
       )}
       {showAdd && mode === "schedule" && (
         <AddEventSheet month={month} year={year} defaultDay={addDay} onClose={() => { setShowAdd(false); setAddDay(null); }}
