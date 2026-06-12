@@ -295,7 +295,7 @@ function TxRow({ t, showDate, onClick, onPin }) {
       {onPin && t.type === "expense" && !t.installment && (
         <button
           onClick={(e) => { e.stopPropagation(); onPin(t); }}
-          title={pinned ? "고정지출 해제" : "매월 고정지출로 등록"}
+          title={pinned ? "고정 지출 해제" : "고정 지출로 등록"}
           style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: pinned ? C.income : C.line }}
         >
           <Repeat2 size={15} strokeWidth={pinned ? 2.5 : 1.8} />
@@ -1641,6 +1641,28 @@ export default function App() {
     })();
   }, [user]);
 
+  // ── fixed:true 정리 마이그레이션 (한 번만) ──
+  // 기존 txs에서 fixed:true인데 rid 없는 것들(개별로 고정 표시된 것)을 false로 초기화
+  useEffect(() => {
+    if (!user) return;
+    const key = "fixedCleaned_v1";
+    if (localStorage.getItem(key)) return;
+    (async () => {
+      const snap = await getDocs(collection(db, "transactions"));
+      const batch = writeBatch(db);
+      let count = 0;
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.fixed === true && !data.rid) {
+          batch.update(d.ref, { fixed: false });
+          count++;
+        }
+      });
+      if (count > 0) await batch.commit();
+      localStorage.setItem(key, "1");
+    })();
+  }, [user]);
+
   // ── Firestore 실시간 구독 ──
   useEffect(() => {
     if (!user) return;
@@ -1973,7 +1995,7 @@ export default function App() {
       {editTx && (
         <AddTxSheet month={editTx.month} year={editTx.year} initial={editTx} onClose={() => setEditTx(null)}
           onSave={(t) => { updateTx(editTx.id, t); setEditTx(null); }}
-          onSaveRecurring={(r) => { addRecurring(r); updateTx(editTx.id, { fixed: true }); setEditTx(null); }}
+          onSaveRecurring={(r) => { addRecurring(r); setEditTx(null); }}
           onDelete={() => { deleteTx(editTx.id); setEditTx(null); }} />
       )}
       {editEvent && (
