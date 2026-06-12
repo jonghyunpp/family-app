@@ -1306,27 +1306,6 @@ export default function App() {
     setCatBudgets(cats);
   }, []);
 
-  const exportExcel = useCallback(async () => {
-    const XLSX = await import("xlsx");
-    const rows = monthTxs
-      .filter((t) => !t._instDerived)
-      .map((t) => ({
-        날짜: `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day || 1).padStart(2, "0")}`,
-        구분: t.type === "income" ? "수입" : "지출",
-        카테고리: t.cat || "",
-        내용: t.memo || "",
-        금액: t.amount || 0,
-        담당: t.who || "",
-        고정: t.fixed ? "O" : "",
-        할부: t.installment ? `${t.installmentCurrent}/${t.installmentTotal}` : "",
-      }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 6 }, { wch: 4 }, { wch: 8 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `${year}년${month}월`);
-    XLSX.writeFile(wb, `우리집_가계부_${year}년${month}월.xlsx`);
-  }, [monthTxs, month, year]);
-
   // ── 파생 데이터 ──
   const fixedFor = (m, y) => recurring.map((r) => ({
     id: "r" + r.id + "-" + y + "-" + m, rid: r.id, type: "expense", cat: r.cat || "기타",
@@ -1361,6 +1340,27 @@ export default function App() {
     monthTxs.filter((t) => t.type === "expense").forEach((t) => { m[t.cat] = (m[t.cat] || 0) + t.amount; });
     return Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [monthTxs]);
+
+  const exportExcel = useCallback(async () => {
+    const XLSX = await import("xlsx");
+    const rows = monthTxs
+      .filter((t) => !t._instDerived)
+      .map((t) => ({
+        날짜: `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day || 1).padStart(2, "0")}`,
+        구분: t.type === "income" ? "수입" : "지출",
+        카테고리: t.cat || "",
+        내용: t.memo || "",
+        금액: t.amount || 0,
+        담당: t.who || "",
+        고정: t.fixed ? "O" : "",
+        할부: t.installment ? `${t.installmentCurrent}/${t.installmentTotal}` : "",
+      }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 6 }, { wch: 4 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `${year}년${month}월`);
+    XLSX.writeFile(wb, `우리집_가계부_${year}년${month}월.xlsx`);
+  }, [monthTxs, month, year]);
 
   const openTx = (t) => {
     if (t.fixed && t.rid) {
