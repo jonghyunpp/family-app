@@ -225,6 +225,9 @@ function ImportSheet({ onClose, onBulkSave, currentWho }) {
 const KINDS = { 예금: { color: "#16A06A", Icon: Landmark }, 적금: { color: "#F2A33C", Icon: PiggyBank }, 주식: { color: "#3568C9", Icon: LineChart } };
 
 const fmt = (n) => (n || 0).toLocaleString("ko-KR") + "원";
+// 입력 중 콤마 포맷 (내부 저장은 숫자문자열, 표시만 콤마)
+const fmtInput = (v) => { const n = String(v || "").replace(/[^0-9]/g, ""); return n ? Number(n).toLocaleString("ko-KR") : ""; };
+const parseInput = (v) => String(v || "").replace(/[^0-9]/g, "");
 const daysIn = (m, y) => new Date(y, m, 0).getDate();
 const firstDow = (m, y) => new Date(y, m - 1, 1).getDay();
 const font = `-apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif`;
@@ -369,11 +372,11 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
         </div>
         {/* 금액 입력 */}
         <input
-          ref={inputRef} type="number" inputMode="decimal" value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          ref={inputRef} type="text" inputMode="numeric" value={fmtInput(amount)}
+          onChange={(e) => setAmount(parseInput(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
           placeholder="0"
-          style={{ width: 110, border: "none", borderBottom: `2px solid ${accentColor}`, fontSize: 22, fontWeight: 800, padding: "2px 0", textAlign: "right", fontFamily: font, background: "none", color: C.ink, outline: "none" }}
+          style={{ width: 120, border: "none", borderBottom: `2px solid ${accentColor}`, fontSize: 22, fontWeight: 800, padding: "2px 0", textAlign: "right", fontFamily: font, background: "none", color: C.ink, outline: "none" }}
         />
         <span style={{ fontSize: 13, fontWeight: 600, color: C.sub, flexShrink: 0 }}>원</span>
         <button onClick={handleSave} disabled={!amount} style={{ flex: 1, border: "none", borderRadius: 12, background: amount ? C.ink : C.line, color: amount ? "#fff" : C.sub, padding: "11px 0", fontWeight: 800, fontSize: 15, cursor: amount ? "pointer" : "default", fontFamily: font }}>저장</button>
@@ -693,7 +696,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
         </div>
         {editing ? (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input type="number" value={val} onChange={(e) => setVal(e.target.value)} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font }} />
+            <input type="text" inputMode="numeric" value={fmtInput(val)} onChange={(e) => setVal(parseInput(e.target.value))} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font }} />
             <button onClick={() => { setBudget(Number(val)); setEditing(false); }} style={{ background: C.ink, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}>저장</button>
           </div>
         ) : (
@@ -757,7 +760,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
             {EXPENSE_CATS.map((c) => (
               <div key={c} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <div style={{ width: 70, fontSize: 12, fontWeight: 600, color: (CATS[c] || CATS["기타"]).color, flexShrink: 0 }}>{c}</div>
-                <input type="number" placeholder="예산 없음" value={catVals[c] || ""} onChange={(e) => setCatVals((v) => ({ ...v, [c]: e.target.value }))}
+                <input type="text" inputMode="numeric" placeholder="예산 없음" value={fmtInput(catVals[c] || "")} onChange={(e) => setCatVals((v) => ({ ...v, [c]: parseInput(e.target.value) }))}
                   style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 8, padding: "7px 10px", fontSize: 16, fontFamily: font }} />
               </div>
             ))}
@@ -854,12 +857,12 @@ function AddAssetSheet({ initial, onClose, onSave, onDelete }) {
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>잔액 / 평가금액</div>
-        <input style={input} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="금액" />
+        <input style={input} type="text" inputMode="numeric" value={fmtInput(amount)} onChange={(e) => setAmount(parseInput(e.target.value))} placeholder="금액" />
       </div>
       {(kind === "적금") && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>월 납입액 (선택)</div>
-          <input style={input} type="number" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="월 납입금액" />
+          <input style={input} type="text" inputMode="numeric" value={fmtInput(monthly)} onChange={(e) => setMonthly(parseInput(e.target.value))} placeholder="월 납입금액" />
         </div>
       )}
       <button onClick={() => name && amount && onSave({ name, kind, amount: Number(amount), monthly: monthly ? Number(monthly) : 0 })}
@@ -1160,7 +1163,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>금액</div>
-        <input style={input} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="금액 입력" />
+        <input style={input} type="text" inputMode="numeric" value={fmtInput(amount)} onChange={(e) => setAmount(parseInput(e.target.value))} placeholder="금액 입력" />
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>메모</div>
@@ -1288,7 +1291,7 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>금액</div>
-        <input style={input} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="금액" />
+        <input style={input} type="text" inputMode="numeric" value={fmtInput(amount)} onChange={(e) => setAmount(parseInput(e.target.value))} placeholder="금액" />
       </div>
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
