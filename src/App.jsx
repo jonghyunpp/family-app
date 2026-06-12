@@ -1644,23 +1644,23 @@ export default function App() {
   return (
     <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", color: C.ink, maxWidth: 480, margin: "0 auto", position: "relative", letterSpacing: "-0.01em" }}>
       {/* 상단 모드 전환 */}
-      <div style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(244,246,245,0.92)", backdropFilter: "blur(12px)", padding: "10px 18px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", background: "#E8ECEA", borderRadius: 14, padding: 3, gap: 2 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(244,246,245,0.92)", backdropFilter: "blur(12px)", padding: "8px 14px 7px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", background: "#E8ECEA", borderRadius: 12, padding: 3, gap: 1, flexShrink: 0 }}>
           {modes.map(([k, label, Icon]) => {
             const active = mode === k;
             return (
-              <button key={k} onClick={() => setMode(k)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 11, border: "none", fontFamily: font, cursor: "pointer", fontSize: 13, fontWeight: active ? 800 : 600, background: active ? "#fff" : "transparent", color: active ? C.ink : "#7E8A83", boxShadow: active ? "0 1px 4px rgba(16,29,23,0.1)" : "none", transition: "all .15s" }}>
-                <Icon size={15} strokeWidth={active ? 2.4 : 2} />{label}
+              <button key={k} onClick={() => setMode(k)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 9, border: "none", fontFamily: font, cursor: "pointer", fontSize: 12, fontWeight: active ? 800 : 600, background: active ? "#fff" : "transparent", color: active ? C.ink : "#7E8A83", boxShadow: active ? "0 1px 4px rgba(16,29,23,0.1)" : "none", transition: "all .15s", whiteSpace: "nowrap" }}>
+                <Icon size={13} strokeWidth={active ? 2.4 : 2} />{label}
               </button>
             );
           })}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {mode === "money" && <button onClick={() => setShowSearch(true)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Search size={19} /></button>}
-          {mode === "money" && <button onClick={exportExcel} title="엑셀 내보내기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Download size={19} /></button>}
-          {mode === "money" && <button onClick={() => setShowImport(true)} title="내역 불러오기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Upload size={19} /></button>}
-          <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex" }}>
-            <div style={{ width: 32, height: 32, borderRadius: 16, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          {mode === "money" && <button onClick={() => setShowSearch(true)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Search size={18} /></button>}
+          {mode === "money" && <button onClick={exportExcel} title="엑셀 내보내기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Download size={18} /></button>}
+          {mode === "money" && <button onClick={() => setShowImport(true)} title="내역 불러오기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Upload size={18} /></button>}
+          <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", marginLeft: 2 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 14, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff" }}>
               {currentWho === "종현" ? "J" : "S"}
             </div>
           </button>
