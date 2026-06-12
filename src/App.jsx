@@ -1217,7 +1217,7 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
   const [fixed, setFixed] = useState(initial?.fixed || false);
   const [makeFixed, setMakeFixed] = useState(false);
   const [isInstallment, setIsInstallment] = useState(initial?.installment || false);
-  const [instTotal, setInstTotal] = useState(initial?.installmentTotal || 12);
+  const [instTotal, setInstTotal] = useState(initial?.installmentTotal || 1);
   const [instCurrent, setInstCurrent] = useState(initial?.installmentCurrent || 1);
   const cats = type === "income" ? INCOME_CATS : EXPENSE_CATS;
   useEffect(() => { if (!cats.includes(cat)) setCat(cats[0]); }, [type]);
