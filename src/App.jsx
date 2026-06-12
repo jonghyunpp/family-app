@@ -1189,11 +1189,9 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
       </div>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>담당</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {Object.keys(WHO).map((w) => (
-            <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 10, padding: "9px 4px", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>{w}</button>
-          ))}
-        </div>
+        <select value={who} onChange={(e) => setWho(e.target.value)} style={{ ...input }}>
+          {Object.keys(WHO).map((w) => <option key={w}>{w}</option>)}
+        </select>
       </div>
       {type === "expense" && (
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
@@ -1653,7 +1651,7 @@ export default function App() {
     return <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontSize: 14 }}>로딩 중...</div>;
   }
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} who={loginWho} />;
+    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} />;
   }
 
   const modes = [["money", "가계부", Coins], ["schedule", "일정", CalendarHeart], ["todo", "할일", ListChecks], ["memo", "메모", StickyNote]];
