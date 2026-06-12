@@ -1840,7 +1840,7 @@ export default function App() {
       {mode === "money" && (
         <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", paddingTop: 8, paddingBottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))", zIndex: 25 }}>
           {tabs.map(([k, label, Icon]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
+            <button key={k} onClick={() => { if (k !== tab) { const n = new Date(); setYear(n.getFullYear()); setMonthRaw(n.getMonth() + 1); } setTab(k); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
               <Icon size={22} strokeWidth={tab === k ? 2.4 : 1.8} style={{ display: "block", margin: "0 auto" }} />
               <div style={{ fontSize: 10.5, fontWeight: tab === k ? 700 : 500, marginTop: 3 }}>{label}</div>
             </button>
