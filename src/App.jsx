@@ -703,7 +703,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
               const { color } = getCatInfo(item.name);
               const pct = Math.round((item.value / totalExpense) * 100);
               const isOpen = openCat === item.name;
-              const catTxs = txs.filter((t) => t.cat === item.name && t.type === "expense");
+              const catTxs = txs.filter((t) => t.cat === item.name && t.type === "expense").sort((a, b) => (b.day || 0) - (a.day || 0));
               return (
                 <div key={item.name}>
                   <div onClick={() => setOpenCat(isOpen ? null : item.name)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer" }}>
