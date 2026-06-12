@@ -358,7 +358,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
             const { color, bg } = CATS[c];
             const sel = cat === c;
             return (
-              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 20, padding: "5px 11px", background: sel ? bg : "#F4F6F5", color: sel ? color : C.sub, fontSize: 12, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap", boxShadow: sel ? `0 0 0 1px ${color}` : "none" }}>
+              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, border: `1px solid ${sel ? color : "transparent"}`, borderRadius: 20, padding: "4px 10px", background: sel ? bg : "#F4F6F5", color: sel ? color : C.sub, fontSize: 12, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" }}>
                 {c}
               </button>
             );
@@ -1215,6 +1215,7 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
   const [isInstallment, setIsInstallment] = useState(initial?.installment || false);
   const [instTotal, setInstTotal] = useState(initial?.installmentTotal || 1);
   const [instCurrent, setInstCurrent] = useState(initial?.installmentCurrent || 1);
+  const [instPrincipal, setInstPrincipal] = useState("");
   const cats = type === "income" ? INCOME_CATS : EXPENSE_CATS;
   useEffect(() => { if (!cats.includes(cat)) setCat(cats[0]); }, [type]);
 
@@ -1293,16 +1294,33 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
               <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#7C3AED", marginBottom: 5 }}>총 개월수</div>
-                  <input type="number" value={instTotal} onChange={(e) => setInstTotal(Math.max(1, Number(e.target.value)))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
+                  <input type="number" inputMode="numeric" value={instTotal} onChange={(e) => {
+                    const v = Math.max(1, Number(e.target.value));
+                    setInstTotal(v);
+                    if (instPrincipal) setAmount(String(Math.round(Number(instPrincipal.replace(/,/g,"")) / v)));
+                  }} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#7C3AED", marginBottom: 5 }}>현재 회차</div>
-                  <input type="number" value={instCurrent} onChange={(e) => setInstCurrent(Math.min(instTotal, Math.max(1, Number(e.target.value))))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
+                  <input type="number" inputMode="numeric" value={instCurrent} onChange={(e) => setInstCurrent(Math.min(instTotal, Math.max(1, Number(e.target.value))))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
                 </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#7C3AED", marginBottom: 5 }}>원금 (총 구매금액)</div>
+                <input type="text" inputMode="numeric" placeholder="원금 입력 시 월 납부액 자동 계산" value={instPrincipal}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/,/g, "");
+                    if (!/^\d*$/.test(raw)) return;
+                    setInstPrincipal(raw ? Number(raw).toLocaleString() : "");
+                    if (raw && instTotal > 1) setAmount(String(Math.round(Number(raw) / instTotal)));
+                    else if (raw) setAmount(raw);
+                  }}
+                  style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 15, fontFamily: font, width: "100%", background: "#fff", fontWeight: 600 }} />
               </div>
               {instRemaining !== null && (
                 <div style={{ fontSize: 12, color: "#6D28D9", fontWeight: 700, textAlign: "center" }}>
                   잔여 {instRemaining}회 · {instEndDate} 자동 종료
+                  {instPrincipal && instTotal > 1 && <span style={{ color: "#9333EA", fontWeight: 500 }}> · 월 {fmt(Math.round(Number(instPrincipal.replace(/,/g,"")) / instTotal))}</span>}
                 </div>
               )}
             </div>
