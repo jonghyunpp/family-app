@@ -448,6 +448,35 @@ function DaySelect({ value, onChange }) {
     </select>
   );
 }
+// iOS 네이티브 드럼롤 스타일 날짜 선택기 (select 3개 → 년/월/일)
+function DatePicker({ value, onChange }) {
+  const now = new Date();
+  const parts = (value || "").split("-");
+  const y = parseInt(parts[0]) || now.getFullYear();
+  const m = parseInt(parts[1]) || now.getMonth() + 1;
+  const d = parseInt(parts[2]) || now.getDate();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 3 + i);
+  const sel = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 4px", fontSize: 15, fontFamily: font, background: "#fff", flex: 1, textAlign: "center", color: C.ink, WebkitAppearance: "none", appearance: "none", cursor: "pointer" };
+  const update = (ny, nm, nd) => {
+    const maxD = new Date(ny, nm, 0).getDate();
+    const safeD = Math.min(nd, maxD);
+    onChange(`${ny}-${String(nm).padStart(2, "0")}-${String(safeD).padStart(2, "0")}`);
+  };
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <select value={y} onChange={(e) => update(+e.target.value, m, d)} style={{ ...sel, flex: "1.3" }}>
+        {years.map((yr) => <option key={yr} value={yr}>{yr}년</option>)}
+      </select>
+      <select value={m} onChange={(e) => update(y, +e.target.value, d)} style={sel}>
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((mo) => <option key={mo} value={mo}>{mo}월</option>)}
+      </select>
+      <select value={d} onChange={(e) => update(y, m, +e.target.value)} style={sel}>
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((dy) => <option key={dy} value={dy}>{dy}일</option>)}
+      </select>
+    </div>
+  );
+}
 
 // ──────── 가계부: 홈 ────────
 function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
@@ -783,16 +812,28 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
 }
 
 // ──────── 가계부: 자산 ────────
-function Assets({ assets, onAdd, onUpdate, onDelete }) {
+function Assets({ assets, txs = [], onAdd, onUpdate, onDelete }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editAsset, setEditAsset] = useState(null);
-  const total = assets.reduce((s, a) => s + a.amount, 0);
+
+  // 수입 - 지출 누계 (앱에 기록된 전체 기간)
+  const totalIncome = txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = txs.filter((t) => t.type === "expense" && !t.fixed).reduce((s, t) => s + t.amount, 0);
+  const netIncome = totalIncome - totalExpense;
+
+  const manualTotal = assets.reduce((s, a) => s + a.amount, 0);
+  const grandTotal = netIncome + manualTotal;
   const byKind = Object.entries(KINDS).map(([k]) => ({ kind: k, total: assets.filter((a) => a.kind === k).reduce((s, a) => s + a.amount, 0) })).filter((x) => x.total > 0);
+
   return (
     <div>
+      {/* 총 자산 요약 */}
       <div style={{ ...card, marginBottom: 12 }}>
-        <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>총 자산</div>
-        <div style={{ fontSize: 22, fontWeight: 800, margin: "4px 0" }}>{fmt(total)}</div>
+        <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>총 자산 추정</div>
+        <div style={{ fontSize: 22, fontWeight: 800, margin: "4px 0", color: grandTotal >= 0 ? C.ink : C.expense }}>{fmt(grandTotal)}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.sub, marginTop: 6 }}>
+          <span style={{ color: C.income }}>순수익 누계</span><span style={{ color: netIncome >= 0 ? C.income : C.expense, fontWeight: 700 }}>{netIncome >= 0 ? "+" : ""}{fmt(netIncome)}</span>
+        </div>
         {byKind.map((x) => {
           const { color } = KINDS[x.kind];
           return (
@@ -802,6 +843,23 @@ function Assets({ assets, onAdd, onUpdate, onDelete }) {
           );
         })}
       </div>
+
+      {/* 순수익 누계 상세 카드 */}
+      <div style={{ ...card, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 10 }}>수입 / 지출 누계</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1, background: C.income + "12", borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 11, color: C.income, fontWeight: 700, marginBottom: 4 }}>총 수입</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.income }}>{fmt(totalIncome)}</div>
+          </div>
+          <div style={{ flex: 1, background: C.expense + "12", borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 11, color: C.expense, fontWeight: 700, marginBottom: 4 }}>총 지출</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.expense }}>{fmt(totalExpense)}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 8 }}>* 고정지출 제외, 앱에 기록된 내역 기준</div>
+      </div>
+
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>계좌 목록</div>
@@ -1058,7 +1116,17 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
               <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 9, padding: "6px 0", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: font }}>{w}</button>
             ))}
           </div>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", fontSize: 16, fontFamily: font, marginBottom: 10, color: dueDate ? C.ink : C.sub }} />
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.sub }}>마감일</span>
+              {dueDate && <button onClick={() => setDueDate("")} style={{ border: "none", background: "none", color: C.sub, fontSize: 11, cursor: "pointer", fontFamily: font, padding: 0 }}>✕ 없음</button>}
+            </div>
+            {dueDate ? (
+              <DatePicker value={dueDate} onChange={setDueDate} />
+            ) : (
+              <button onClick={() => setDueDate(new Date().toISOString().slice(0,10))} style={{ width: "100%", border: `1px dashed ${C.line}`, borderRadius: 10, padding: "9px 12px", fontSize: 13, fontFamily: font, background: "#fff", color: C.sub, cursor: "pointer", textAlign: "left" }}>+ 마감일 추가</button>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={reset} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 0", background: "#fff", color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font }}>취소</button>
             <button onClick={handleAdd} style={{ flex: 2, border: "none", borderRadius: 10, padding: "10px 0", background: C.ink, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: font }}>추가</button>
@@ -1185,7 +1253,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
       </div>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>날짜</div>
-        <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={{ ...input, color: C.ink }} />
+        <DatePicker value={dateStr} onChange={setDateStr} />
       </div>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>담당</div>
@@ -1262,7 +1330,7 @@ function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDe
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>날짜</div>
-          <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={{ ...input, color: C.ink }} />
+          <DatePicker value={dateStr} onChange={setDateStr} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>시간</div>
@@ -1690,7 +1758,7 @@ export default function App() {
             {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
-            {tab === "asset" && <Assets assets={assets} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />}
+            {tab === "asset" && <Assets assets={assets} txs={txs} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />}
           </>
         )}
         {mode === "schedule" && <Schedule events={events} month={month} year={year} setMonth={setMonth} onJump={jumpTo} onEdit={setEditEvent} onDelete={deleteEvent} onAdd={(d) => { setAddDay(d); setShowAdd(true); }} />}
