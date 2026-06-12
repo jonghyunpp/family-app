@@ -375,7 +375,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
           })}
         </div>
         {/* 상세 입력 버튼 */}
-        <button onClick={onDetail} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${C.line}`, background: "#fff", color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <button onClick={() => onDetail && onDetail(date)} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${C.line}`, background: "#fff", color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <Plus size={15} strokeWidth={2.5} />
         </button>
       </div>
@@ -1790,7 +1790,7 @@ export default function App() {
       </div>
 
       {mode === "money" && (tab === "home" || tab === "cal") && (
-        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={() => setShowAdd(true)}
+        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={(d) => { setAddTxDate(d || null); setShowAdd(true); }}
           date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null} />
       )}
 
