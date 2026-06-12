@@ -23,7 +23,6 @@ const C = {
 };
 const WHO = { 종현: "#3568C9", 성은: "#E5559A", 같이: "#16A06A" };
 const CATS = {
-  식비:       { color: "#D82A18", bg: "#FFD5CE", Icon: UtensilsCrossed },   // 선명한 빨강
   외식:       { color: "#C85010", bg: "#FFE0C0", Icon: Utensils },           // 오렌지
   "카페/간식": { color: "#B82888", bg: "#F9C8E8", Icon: Coffee },             // 로즈핑크
   "술/유흥":  { color: "#6820C8", bg: "#E0C8FA", Icon: Wine },               // 퍼플
@@ -33,7 +32,7 @@ const CATS = {
   주거:       { color: "#3838B0", bg: "#C8C8F4", Icon: Building2 },           // 인디고
   통신:       { color: "#0678C0", bg: "#B8E4F8", Icon: Wifi },               // 시안
   공과금:     { color: "#A86000", bg: "#FFE0A0", Icon: Zap },                // 앰버
-  생활용품:   { color: "#4830B0", bg: "#D4C8F8", Icon: ShoppingBasket },      // 라벤더
+  생필품:     { color: "#4830B0", bg: "#D4C8F8", Icon: ShoppingBasket },      // 라벤더
   "문화/여가": { color: "#2820A0", bg: "#C8C8F0", Icon: Clapperboard },       // 바이올렛
   여행:       { color: "#087878", bg: "#B0E8E4", Icon: Plane },              // 틸
   교육:       { color: "#0848A8", bg: "#B8CCF4", Icon: BookOpen },           // 블루
@@ -52,13 +51,12 @@ function getCatInfo(name) {
   const hue = ((Math.abs(h) % 36) * 10 + 10) % 360;
   return { color: `hsl(${hue},60%,40%)`, bg: `hsl(${hue},55%,88%)`, Icon: MoreHorizontal };
 }
-const EXPENSE_CATS = ["식비", "외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생활용품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
+const EXPENSE_CATS = ["외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생필품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
 
 // ──────── 이용내역서 파서 ────────
 const CAT_KW = {
-  "식비":      ["마트","편의점","GS25","CU","세븐","이마트","롯데마트","홈플러스","코스트코","농협하나로","쿠팡로켓","SSG","노브랜드","트레이더스","다이소","위마트"],
-  "외식":      ["배달의민족","배민","쿠팡이츠","요기요","맥도날드","버거킹","KFC","롯데리아","서브웨이","치킨","피자","족발","보쌈","냉면","해장국","분식","김밥","고기집","삼겹","갈비","순대","떡볶이","초밥","덮밥","짜장","짬뽕","돈까스","우동","라멘","식당","음식점"],
+  "외식":      ["마트","편의점","GS25","CU","세븐","이마트","롯데마트","홈플러스","코스트코","농협하나로","쿠팡로켓","SSG","노브랜드","트레이더스","다이소","위마트","배달의민족","배민","쿠팡이츠","요기요","맥도날드","버거킹","KFC","롯데리아","서브웨이","치킨","피자","족발","보쌈","냉면","해장국","분식","김밥","고기집","삼겹","갈비","순대","떡볶이","초밥","덮밥","짜장","짬뽕","돈까스","우동","라멘","식당","음식점"],
   "카페/간식": ["스타벅스","이디야","투썸","커피빈","할리스","탐앤탐스","빽다방","메가커피","컴포즈","카페","베이커리","파리바게뜨","뚜레쥬르","설빙","베스킨","던킨","도넛","마카롱","크리스피","공차","코코","요거트","와플"],
   "술/유흥":   ["포차","호프","술집","BAR","bar","주점","나이트","클럽","노래방","PC방","오락실","경마","카지노"],
   "의류/미용": ["무신사","지그재그","29cm","에이블리","미용실","헤어","네일","살롱","뷰티","아모레","LG생활","이니스프리","에뛰드","H&M","자라","유니클로","스파오","탑텐","신세계몰","롯데온","올리브영"],
@@ -67,7 +65,7 @@ const CAT_KW = {
   "주거":      ["관리비","아파트관리","월세","보증금","인테리어","가구","청소업체","이사","용달"],
   "통신":      ["SKT","SK텔레콤","KT","LGU+","LG유플러스","통신비","핸드폰","알뜰폰","넷플릭스","왓챠","웨이브","시즌","왓챠","디즈니","애플","구글","유튜브프리미엄","스포티파이","멜론"],
   "공과금":    ["전기세","전기요금","도시가스","수도요금","한전","한국전력","지역난방","전기도시"],
-  "생활용품":  ["이케아","쿠쿠","리빙","청소","세제","생필품","락앤락","3M","크린랩"],
+  "생필품":    ["이케아","쿠쿠","리빙","청소","세제","생필품","락앤락","3M","크린랩"],
   "문화/여가": ["CGV","롯데시네마","메가박스","교보문고","영풍문고","알라딘","예스24","도서","공연","전시","박물관","멜론","지니","스팀","닌텐도","플레이스테이션"],
   "여행":      ["호텔","에어비앤비","야놀자","여기어때","여행사","투어","리조트","펜션","모텔","게스트하우스"],
   "교육":      ["학원","교육","과외","강의","학습지","웅진","대교","클래스101","인프런","패스트캠퍼스","유데미","구름"],
@@ -159,7 +157,7 @@ function ImportSheet({ onClose, onBulkSave, currentWho }) {
       if (idx !== i) return r;
       const updated = { ...r, [field]: val };
       // 타입이 바뀌면 카테고리도 초기화
-      if (field === "type") updated.cat = val === "income" ? "급여" : "식비";
+      if (field === "type") updated.cat = val === "income" ? "급여" : "외식";
       return updated;
     }));
   const removeRow = (i) => setRows((prev) => prev.filter((_, idx) => idx !== i));
@@ -330,14 +328,14 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
 // ──────── 빠른 입력 바 ────────
 function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
   const [amount, setAmount] = useState("");
-  const [cat, setCat] = useState("식비");
+  const [cat, setCat] = useState("외식");
   const [type, setType] = useState("expense");
   const inputRef = useRef(null);
 
   const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
 
   useEffect(() => {
-    setCat(type === "expense" ? "식비" : "급여");
+    setCat(type === "expense" ? "외식" : "급여");
   }, [type]);
 
   const handleSave = () => {
@@ -1213,7 +1211,7 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
 function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring }) {
   const isEdit = !!initial;
   const [type, setType] = useState(initial?.type || "expense");
-  const [cat, setCat] = useState(initial?.cat || "식비");
+  const [cat, setCat] = useState(initial?.cat || "외식");
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [memo, setMemo] = useState(initial?.memo || "");
   const [who, setWho] = useState(initial?.who || defaultWho);
