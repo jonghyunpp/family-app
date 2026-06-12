@@ -138,7 +138,7 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
   );
 }
 // ──────── 빠른 입력 바 ────────
-function QuickAddBar({ onSave, onDetail }) {
+function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("식비");
   const [type, setType] = useState("expense");
@@ -154,7 +154,7 @@ function QuickAddBar({ onSave, onDetail }) {
     const n = Number(amount);
     if (!n) return;
     const today = new Date();
-    onSave({ type, cat, amount: n, month: today.getMonth() + 1, day: today.getDate(), year: today.getFullYear(), who: "종현", memo: "", fixed: false });
+    onSave({ type, cat, amount: n, month: today.getMonth() + 1, day: today.getDate(), year: today.getFullYear(), who: defaultWho, memo: "", fixed: false });
     setAmount("");
     inputRef.current?.blur();
   };
@@ -537,7 +537,7 @@ function AddAssetSheet({ onClose, onSave }) {
 }
 
 // ──────── 일정 ────────
-function Schedule({ events, month, year, setMonth, onJump, onEdit, onDelete }) {
+function Schedule({ events, month, year, setMonth, onJump, onEdit, onDelete, onAdd }) {
   const [sel, setSel] = useState(null);
   const [showYM, setShowYM] = useState(false);
   const evMap = useMemo(() => {
@@ -567,7 +567,10 @@ function Schedule({ events, month, year, setMonth, onJump, onEdit, onDelete }) {
       </div>
       {sel && (
         <div style={card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>{month}월 {sel}일</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>{month}월 {sel}일</div>
+            <button onClick={() => onAdd && onAdd(sel)} style={{ border: "none", background: C.soft, borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, color: C.ink }}><Plus size={12} />추가</button>
+          </div>
           {dayEvs.length === 0 && <div style={{ fontSize: 13, color: C.sub, textAlign: "center", padding: "16px 0" }}>일정이 없어요</div>}
           {dayEvs.map((e) => (
             <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0" }}>
@@ -654,13 +657,13 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
 }
 
 // ──────── 시트: 내역 추가/수정 ────────
-function AddTxSheet({ month, year, initial, onClose, onSave, onDelete, onSaveRecurring }) {
+function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring }) {
   const isEdit = !!initial;
   const [type, setType] = useState(initial?.type || "expense");
   const [cat, setCat] = useState(initial?.cat || "식비");
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [memo, setMemo] = useState(initial?.memo || "");
-  const [who, setWho] = useState(initial?.who || "같이");
+  const [who, setWho] = useState(initial?.who || defaultWho);
   const [day, setDay] = useState(initial?.day || new Date().getDate());
   const [fixed, setFixed] = useState(initial?.fixed || false);
   const [makeFixed, setMakeFixed] = useState(false);
@@ -766,10 +769,10 @@ function AddTxSheet({ month, year, initial, onClose, onSave, onDelete, onSaveRec
 }
 
 // ──────── 시트: 일정 추가/수정 ────────
-function AddEventSheet({ month, year, initial, onClose, onSave, onDelete }) {
+function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDelete }) {
   const isEdit = !!initial;
   const [title, setTitle] = useState(initial?.title || "");
-  const [day, setDay] = useState(initial?.day || new Date().getDate());
+  const [day, setDay] = useState(initial?.day || defaultDay || new Date().getDate());
   const [time, setTime] = useState(initial?.time || "");
   const [place, setPlace] = useState(initial?.place || "");
   const [who, setWho] = useState(initial?.who || "같이");
@@ -858,8 +861,9 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
   );
 }
 
-// ──────── 로그인 화면 (PIN 방식) ────────
+// ──────── 로그인 화면 (이름 선택 → PIN) ────────
 function LoginScreen({ onLogin, loading, error }) {
+  const [who, setWho] = useState(null); // null = 이름 선택 단계
   const [pin, setPin] = useState("");
 
   useEffect(() => { if (error) setPin(""); }, [error]);
@@ -868,22 +872,46 @@ function LoginScreen({ onLogin, loading, error }) {
     if (loading || pin.length >= 6) return;
     const next = pin + n;
     setPin(next);
-    if (next.length === 6) setTimeout(() => onLogin(next), 80);
+    if (next.length === 6) setTimeout(() => onLogin(next, who), 80);
   };
   const handleDel = () => { if (!loading) setPin((p) => p.slice(0, -1)); };
 
+  // ── 단계 1: 이름 선택 ──
+  if (!who) {
+    return (
+      <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ fontSize: 52, marginBottom: 12 }}>🏠</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: C.ink, marginBottom: 4 }}>우리집</div>
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 48 }}>가계부 · 일정 · 할일</div>
+        <div style={{ width: "100%", maxWidth: 280, display: "flex", gap: 14 }}>
+          {["종현", "성은"].map((name) => {
+            const color = WHO[name];
+            const initial = name === "종현" ? "J" : "S";
+            return (
+              <button key={name} onClick={() => setWho(name)} style={{ flex: 1, padding: "24px 0", borderRadius: 20, border: `2px solid ${color}20`, background: "#fff", cursor: "pointer", fontFamily: font, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 26, background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#fff" }}>{initial}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{name}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── 단계 2: PIN 입력 ──
+  const color = WHO[who];
+  const initial = who === "종현" ? "J" : "S";
   return (
     <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ fontSize: 52, marginBottom: 12 }}>🏠</div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: C.ink, marginBottom: 4 }}>우리집</div>
-      <div style={{ fontSize: 13, color: C.sub, marginBottom: 40 }}>가계부 · 일정 · 할일</div>
+      <div style={{ width: 56, height: 56, borderRadius: 28, background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 12 }}>{initial}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: C.ink, marginBottom: 4 }}>{who}</div>
+      <div style={{ fontSize: 13, color: C.sub, marginBottom: 40 }}>비밀번호를 입력해주세요</div>
 
       <div style={{ width: "100%", maxWidth: 280 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.sub, textAlign: "center", marginBottom: 24 }}>비밀번호 입력</div>
-
         <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 32 }}>
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} style={{ width: 14, height: 14, borderRadius: 7, background: i < pin.length ? C.ink : C.line, transition: "background .15s" }} />
+            <div key={i} style={{ width: 14, height: 14, borderRadius: 7, background: i < pin.length ? color : C.line, transition: "background .15s" }} />
           ))}
         </div>
 
@@ -899,6 +927,7 @@ function LoginScreen({ onLogin, loading, error }) {
             </button>
           ))}
         </div>
+        <button onClick={() => setWho(null)} style={{ width: "100%", marginTop: 20, border: "none", background: "none", color: C.sub, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: font }}>← 다시 선택</button>
       </div>
     </div>
   );
@@ -910,6 +939,7 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginWho, setLoginWho] = useState(null);
+  const [currentWho, setCurrentWho] = useState("종현");
 
   // Firebase 데이터
   const [txs, setTxs] = useState([]);
@@ -926,6 +956,7 @@ export default function App() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonthRaw] = useState(now.getMonth() + 1);
   const [showAdd, setShowAdd] = useState(false);
+  const [addDay, setAddDay] = useState(null); // 일정 추가 시 기본 날짜
   const [editTx, setEditTx] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
   const [editRecur, setEditRecur] = useState(null);
@@ -942,11 +973,12 @@ export default function App() {
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  const handleLogin = async (pin) => {
+  const handleLogin = async (pin, who) => {
     if (!pin) return;
     setLoginLoading(true); setLoginError("");
     try {
       await signInWithEmailAndPassword(auth, USERS["종현"], pin);
+      setCurrentWho(who || "종현");
     } catch (e) {
       setLoginError("비밀번호가 맞지 않아요.");
       setLoginLoading(false);
@@ -1091,8 +1123,10 @@ export default function App() {
             );
           })}
         </div>
-        <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}>
-          <LogOut size={18} />
+        <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 16, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>
+            {currentWho === "종현" ? "J" : "S"}
+          </div>
         </button>
       </div>
 
@@ -1106,16 +1140,16 @@ export default function App() {
             {tab === "asset" && <Assets assets={assets} onAdd={addAsset} onDelete={deleteAsset} />}
           </>
         )}
-        {mode === "schedule" && <Schedule events={events} month={month} year={year} setMonth={setMonth} onJump={jumpTo} onEdit={setEditEvent} onDelete={deleteEvent} />}
+        {mode === "schedule" && <Schedule events={events} month={month} year={year} setMonth={setMonth} onJump={jumpTo} onEdit={setEditEvent} onDelete={deleteEvent} onAdd={(d) => { setAddDay(d); setShowAdd(true); }} />}
         {mode === "todo" && <Todos todos={todos} onToggle={(id) => { const t = todos.find((x) => x.id === id); if (t) toggleTodo(id, t.done); }} onAdd={addTodo} onDelete={deleteTodo} />}
       </div>
 
       {mode === "money" && (tab === "home" || tab === "cal") && (
-        <QuickAddBar onSave={(t) => addTx(t)} onDetail={() => setShowAdd(true)} />
+        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={() => setShowAdd(true)} />
       )}
 
       {mode === "schedule" && (
-        <button onClick={() => setShowAdd(true)} aria-label="일정 추가" style={{ position: "fixed", bottom: 30, right: "max(18px, calc(50% - 222px))", width: 54, height: 54, borderRadius: 27, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20 }}>
+        <button onClick={() => { setAddDay(null); setShowAdd(true); }} aria-label="일정 추가" style={{ position: "fixed", bottom: 30, right: "max(18px, calc(50% - 222px))", width: 54, height: 54, borderRadius: 27, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20 }}>
           <Plus size={26} />
         </button>
       )}
@@ -1133,13 +1167,13 @@ export default function App() {
 
       {/* 시트들 */}
       {showAdd && mode === "money" && (
-        <AddTxSheet month={month} year={year} onClose={() => setShowAdd(false)}
+        <AddTxSheet month={month} year={year} defaultWho={currentWho} onClose={() => setShowAdd(false)}
           onSave={(t) => { addTx(t); setShowAdd(false); }}
           onSaveRecurring={(r) => { addRecurring(r); setShowAdd(false); }} />
       )}
       {showAdd && mode === "schedule" && (
-        <AddEventSheet month={month} year={year} onClose={() => setShowAdd(false)}
-          onSave={(e) => { addEvent(e); setShowAdd(false); }} />
+        <AddEventSheet month={month} year={year} defaultDay={addDay} onClose={() => { setShowAdd(false); setAddDay(null); }}
+          onSave={(e) => { addEvent(e); setShowAdd(false); setAddDay(null); }} />
       )}
       {editTx && (
         <AddTxSheet month={editTx.month} year={editTx.year} initial={editTx} onClose={() => setEditTx(null)}
