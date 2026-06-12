@@ -2,11 +2,11 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Home as HomeIcon, CalendarDays, PieChart as ChartPie, Target, Wallet, Plus,
-  UtensilsCrossed, Utensils, Baby, ShoppingBasket, Coffee, Car, Stethoscope,
-  Clapperboard, MoreHorizontal, Banknote, TrendingUp, Landmark,
+  Utensils, Baby, ShoppingBasket, Car, Stethoscope,
+  MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
   Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
-  Wifi, Zap, CreditCard, Wine, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload,
+  CreditCard, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc,
@@ -599,7 +599,6 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx, sel, onSel, onDetail 
 function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx }) {
   const [openCat, setOpenCat] = useState(null);
   const COLORS = byCat.map((x) => getCatInfo(x.name).color);
-  const PASTEL_COLORS = byCat.map((x) => getCatInfo(x.name).bg);
   const diff = prevExpense != null ? totalExpense - prevExpense : null;
 
   // 담당자별 지출
