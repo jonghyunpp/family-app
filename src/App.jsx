@@ -16,11 +16,17 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebas
 import { auth, db, USERS } from "./firebase.js";
 
 // ──────── 디자인 토큰 ────────
-const C = {
+const C_LIGHT = {
   bg: "#F4F6F5", card: "#FFFFFF", ink: "#101D17", sub: "#8A938D",
   line: "#EDF0EE", income: "#16A06A", expense: "#F25C44", asset: "#3568C9",
   soft: "#F0F4F1", moneyIn: "#2E62C9", moneyOut: "#E14B30",
 };
+const C_DARK = {
+  bg: "#111816", card: "#1C2820", ink: "#E6EFEA", sub: "#7A8A7E",
+  line: "#2C3C34", income: "#2ECC87", expense: "#F25C44", asset: "#5588E8",
+  soft: "#1A2822", moneyIn: "#5588E8", moneyOut: "#E85040",
+};
+const C = { ...C_LIGHT }; // 런타임에 Object.assign으로 테마 전환
 const WHO = { 종현: "#3568C9", 성은: "#E5559A", 같이: "#16A06A" };
 const CATS = {
   외식:          { color: "#C85010", bg: "#FFE0C0", Icon: Utensils },        // 오렌지
@@ -227,11 +233,12 @@ const parseInput = (v) => String(v || "").replace(/[^0-9]/g, "");
 const daysIn = (m, y) => new Date(y, m, 0).getDate();
 const firstDow = (m, y) => new Date(y, m - 1, 1).getDay();
 const font = `-apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif`;
-const card = { background: C.card, borderRadius: 20, padding: 18, boxShadow: "0 1px 3px rgba(16,29,23,0.05)" };
+// card는 getter로 정의해서 C.card가 바뀌면 항상 최신값 반환
+const card = { get background() { return C.card; }, borderRadius: 20, padding: 18, boxShadow: "0 1px 3px rgba(16,29,23,0.05)" };
 const navBtn = (disabled) => ({
-  width: 32, height: 32, borderRadius: 10, border: "none", background: "#fff",
+  width: 32, height: 32, borderRadius: 10, border: "none", background: C.card,
   boxShadow: "0 1px 3px rgba(16,29,23,0.06)", cursor: disabled ? "default" : "pointer",
-  color: disabled ? "#CFD6D1" : "#5A655F",
+  color: disabled ? C.line : C.sub,
   display: "flex", alignItems: "center", justifyContent: "center",
 });
 
@@ -477,7 +484,7 @@ function DatePicker({ value, onChange }) {
 }
 
 // ──────── 가계부: 홈 ────────
-function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
+function Home({ totals, budget, txs, month, year, setMonth, onTx, appTitle = "우리집" }) {
   const remain = budget - totals.expense;
   const pct = Math.min(100, Math.round((totals.expense / budget) * 100));
   const recent = [...txs].sort((a, b) => b.day - a.day).slice(0, 5);
@@ -486,7 +493,6 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18, padding: "0 2px" }}>
         <div>
           <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>{year}년 {month}월</div>
-          <h1 style={{ fontSize: 19, fontWeight: 800, margin: "2px 0 0" }}>우리집 가계부</h1>
         </div>
         <MonthNav month={month} setMonth={setMonth} />
       </header>
@@ -1529,12 +1535,18 @@ export default function App() {
   const [budget, setBudgetState] = useState(2000000);
   const [catBudgets, setCatBudgets] = useState({});
 
+  // 앱 표시 설정 (Firestore 저장)
+  const [appTitle, setAppTitleState] = useState("우리집");
+  const [userNames, setUserNamesState] = useState({ 종현: "종현", 성은: "성은", 같이: "같이" });
+
   // UI 상태
   const [mode, setMode] = useState("money");
   const [tab, setTab] = useState("home");
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonthRaw] = useState(now.getMonth() + 1);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "1");
+  const [showSettings, setShowSettings] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -1551,6 +1563,13 @@ export default function App() {
     else setMonthRaw(m);
   };
   const jumpTo = (y, m) => { setYear(y); setMonthRaw(m); };
+
+  // ── 다크모드 적용 ──
+  useEffect(() => {
+    Object.assign(C, darkMode ? C_DARK : C_LIGHT);
+    document.body.style.background = C.bg;
+    localStorage.setItem("darkMode", darkMode ? "1" : "0");
+  }, [darkMode]);
 
   // ── 인증 ──
   useEffect(() => {
@@ -1626,6 +1645,13 @@ export default function App() {
       onSnapshot(doc(db, "settings", "catBudget"), (snap) => {
         if (snap.exists()) setCatBudgets(snap.data() || {});
       }),
+      onSnapshot(doc(db, "settings", "display"), (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d.appTitle) setAppTitleState(d.appTitle);
+          if (d.userNames) setUserNamesState((p) => ({ ...p, ...d.userNames }));
+        }
+      }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [user]);
@@ -1643,6 +1669,10 @@ export default function App() {
   }, []);
   const deleteTx = useCallback(async (id) => {
     await deleteDoc(doc(db, "transactions", id));
+  }, []);
+
+  const saveDisplay = useCallback(async (patch) => {
+    await setDoc(doc(db, "settings", "display"), patch, { merge: true });
   }, []);
 
   const addEvent = useCallback(async (e) => {
@@ -1800,11 +1830,9 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
           {mode === "money" && <button onClick={() => setShowSearch(true)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Search size={18} /></button>}
-          {mode === "money" && <button onClick={exportExcel} title="엑셀 내보내기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Download size={18} /></button>}
-          {mode === "money" && <button onClick={() => setShowImport(true)} title="내역 불러오기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Upload size={18} /></button>}
-          <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", marginLeft: 2 }}>
+          <button onClick={() => setShowSettings(true)} style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", marginLeft: 2 }}>
             <div style={{ width: 28, height: 28, borderRadius: 14, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff" }}>
-              {currentWho === "종현" ? "J" : "S"}
+              {currentWho[0]}
             </div>
           </button>
         </div>
@@ -1813,7 +1841,7 @@ export default function App() {
       <div style={{ padding: "10px 18px", paddingBottom: `calc(${mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120}px + env(safe-area-inset-bottom, 0px))` }}>
         {mode === "money" && (
           <>
-            {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
+            {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} appTitle={appTitle} />}
             {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} sel={calSel} onSel={setCalSel} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
             {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
@@ -1875,6 +1903,86 @@ export default function App() {
       )}
       {showSearch && <TxSearch txs={txs} onClose={() => setShowSearch(false)} onTx={openTx} />}
       {showImport && <ImportSheet onClose={() => setShowImport(false)} onBulkSave={bulkAddTxs} currentWho={currentWho} />}
+
+      {/* 설정 패널 */}
+      {showSettings && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(16,29,23,0.45)" }} onClick={() => setShowSettings(false)} />
+          <div style={{ position: "relative", background: C.card, borderRadius: "20px 20px 0 0", padding: "20px 18px calc(env(safe-area-inset-bottom) + 28px)", fontFamily: font }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>설정</div>
+              <button onClick={() => setShowSettings(false)} style={{ border: "none", background: "none", fontSize: 22, color: C.sub, cursor: "pointer", padding: 4 }}>×</button>
+            </div>
+
+            {/* 앱 이름 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 10, letterSpacing: "0.05em" }}>앱 이름</div>
+              <input defaultValue={appTitle} onBlur={(e) => { const v = e.target.value.trim() || "우리집"; setAppTitleState(v); saveDisplay({ appTitle: v }); }}
+                style={{ width: "100%", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 15, fontFamily: font, background: C.bg, color: C.ink, fontWeight: 700, boxSizing: "border-box" }} />
+            </div>
+
+            {/* 사용자 이름 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 10, letterSpacing: "0.05em" }}>사용자 이름</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["종현", WHO["종현"]], ["성은", WHO["성은"]]].map(([key, color]) => (
+                  <div key={key} style={{ flex: 1 }}>
+                    <input defaultValue={userNames[key]} onBlur={(e) => { const v = e.target.value.trim() || key; setUserNamesState((p) => ({ ...p, [key]: v })); saveDisplay({ userNames: { [key]: v } }); }}
+                      style={{ width: "100%", border: `1.5px solid ${color}40`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, background: color + "10", color, fontWeight: 700, boxSizing: "border-box", textAlign: "center" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 현재 사용자 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 10, letterSpacing: "0.05em" }}>현재 사용자</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {Object.entries(WHO).map(([w, color]) => (
+                  <button key={w} onClick={() => setCurrentWho(w)}
+                    style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${currentWho === w ? color : C.line}`, background: currentWho === w ? color + "18" : C.bg, color: currentWho === w ? color : C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font, transition: "all .15s" }}>
+                    {userNames[w] || w}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 테마 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 10, letterSpacing: "0.05em" }}>테마</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["라이트", false, "☀️"], ["다크", true, "🌙"]].map(([label, isDark, emoji]) => (
+                  <button key={label} onClick={() => setDarkMode(isDark)}
+                    style={{ flex: 1, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${darkMode === isDark ? C.ink : C.line}`, background: darkMode === isDark ? C.ink : C.bg, color: darkMode === isDark ? C.card : C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font, transition: "all .15s" }}>
+                    {emoji} {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 데이터 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 10, letterSpacing: "0.05em" }}>데이터</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { exportExcel(); setShowSettings(false); }}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>
+                  <Download size={15} />엑셀 내보내기
+                </button>
+                <button onClick={() => { setShowImport(true); setShowSettings(false); }}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>
+                  <Upload size={15} />내역 불러오기
+                </button>
+              </div>
+            </div>
+
+            {/* 로그아웃 */}
+            <button onClick={() => signOut(auth)}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: `1.5px solid ${C.expense}20`, background: C.expense + "0D", color: C.expense, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font }}>
+              로그아웃
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
