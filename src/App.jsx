@@ -346,11 +346,11 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", flex: 1, WebkitOverflowScrolling: "touch" }}>
           {cats.map((c) => {
-            const { color, bg, Icon } = CATS[c];
+            const { color, bg } = CATS[c];
             const sel = cat === c;
             return (
-              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 14, padding: "7px 10px", background: bg, color: sel ? color : C.sub, fontSize: 10, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, minWidth: 50, boxShadow: sel ? `0 0 0 1.5px ${color}` : "none" }}>
-                <Icon size={16} strokeWidth={2} color={color} />{c}
+              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 20, padding: "5px 11px", background: sel ? bg : "#F4F6F5", color: sel ? color : C.sub, fontSize: 12, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap", boxShadow: sel ? `0 0 0 1px ${color}` : "none" }}>
+                {c}
               </button>
             );
           })}
@@ -422,7 +422,7 @@ function Sheet({ onClose, children, title }) {
       <div style={{ position: "absolute", inset: 0, background: "rgba(16,29,23,0.45)" }} onClick={onClose} />
       <div style={{ position: "relative", background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 18px calc(env(safe-area-inset-bottom) + 24px)", maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-          <div style={{ fontSize: 17, fontWeight: 800 }}>{title}</div>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>{title}</div>
           <button onClick={onClose} style={{ border: "none", background: "none", fontSize: 22, color: C.sub, cursor: "pointer", padding: 4 }}>×</button>
         </div>
         {children}
@@ -448,13 +448,13 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18, padding: "0 2px" }}>
         <div>
           <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>{year}년 {month}월</div>
-          <h1 style={{ fontSize: 23, fontWeight: 800, margin: "3px 0 0" }}>우리집 가계부</h1>
+          <h1 style={{ fontSize: 19, fontWeight: 800, margin: "2px 0 0" }}>우리집 가계부</h1>
         </div>
         <MonthNav month={month} setMonth={setMonth} />
       </header>
       <div style={{ ...card, marginBottom: 12 }}>
         <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>{month}월 남은 예산</div>
-        <div style={{ fontSize: 31, fontWeight: 800, margin: "6px 0 14px", color: remain >= 0 ? C.ink : C.moneyOut }}>{fmt(remain)}</div>
+        <div style={{ fontSize: 25, fontWeight: 800, margin: "6px 0 12px", color: remain >= 0 ? C.ink : C.moneyOut }}>{fmt(remain)}</div>
         <div style={{ height: 8, background: C.soft, borderRadius: 5, overflow: "hidden" }}>
           <div style={{ width: pct + "%", height: "100%", borderRadius: 5, background: pct > 85 ? C.expense : C.income, transition: "width .4s" }} />
         </div>
@@ -465,15 +465,15 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx }) {
       <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
         <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
           <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>수입</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.moneyIn, marginTop: 4 }}>{fmt(totals.income)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.moneyIn, marginTop: 3 }}>{fmt(totals.income)}</div>
         </div>
         <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
           <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>지출</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.moneyOut, marginTop: 4 }}>{fmt(totals.expense)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.moneyOut, marginTop: 3 }}>{fmt(totals.expense)}</div>
         </div>
         <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
           <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>순수입</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: totals.income - totals.expense >= 0 ? C.moneyIn : C.moneyOut, marginTop: 4 }}>{totals.income - totals.expense >= 0 ? "+" : ""}{fmt(totals.income - totals.expense)}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: totals.income - totals.expense >= 0 ? C.moneyIn : C.moneyOut, marginTop: 4 }}>{totals.income - totals.expense >= 0 ? "+" : ""}{fmt(totals.income - totals.expense)}</div>
         </div>
       </div>
       {recent.length > 0 && (
@@ -516,7 +516,7 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
   return (
     <div>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>{year}년 {month}월</div>
+        <div style={{ fontSize: 14, fontWeight: 800 }}>{year}년 {month}월</div>
         <MonthNav month={month} setMonth={setMonth} />
       </header>
       <div style={{ ...card, marginBottom: 16 }}>
@@ -575,7 +575,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
   return (
     <div>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>{month}월 통계</div>
+        <div style={{ fontSize: 14, fontWeight: 800 }}>{month}월 통계</div>
         <MonthNav month={month} setMonth={setMonth} />
       </header>
       {/* 6개월 추이 차트 */}
@@ -602,7 +602,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
         <>
           <div style={{ ...card, marginBottom: 12 }}>
             <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>총 지출</div>
-            <div style={{ fontSize: 26, fontWeight: 800, margin: "4px 0 8px" }}>{fmt(totalExpense)}</div>
+            <div style={{ fontSize: 21, fontWeight: 800, margin: "4px 0 6px" }}>{fmt(totalExpense)}</div>
             {diff !== null && (
               <div style={{ fontSize: 12, color: diff > 0 ? C.moneyOut : C.income, fontWeight: 600 }}>
                 지난달보다 {fmt(Math.abs(diff))} {diff > 0 ? "더 썼어요" : "덜 썼어요"}
@@ -613,7 +613,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={byCat} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value">
-                  {byCat.map((_, i) => <Cell key={i} fill={PASTEL_COLORS[i]} stroke={COLORS[i]} strokeWidth={1.5} />)}
+                  {byCat.map((_, i) => <Cell key={i} fill={COLORS[i]} stroke="#fff" strokeWidth={2} />)}
                 </Pie>
                 <Tooltip formatter={(v) => fmt(v)} />
               </PieChart>
@@ -685,7 +685,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
   }, [monthTxs]);
   return (
     <div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>{month}월 예산</div>
+      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>{month}월 예산</div>
       <div style={{ ...card, marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>월 예산</div>
@@ -697,7 +697,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
             <button onClick={() => { setBudget(Number(val)); setEditing(false); }} style={{ background: C.ink, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}>저장</button>
           </div>
         ) : (
-          <div style={{ fontSize: 26, fontWeight: 800 }}>{fmt(budget)}</div>
+          <div style={{ fontSize: 21, fontWeight: 800 }}>{fmt(budget)}</div>
         )}
         <div style={{ marginTop: 14, height: 8, background: C.soft, borderRadius: 5, overflow: "hidden" }}>
           <div style={{ width: Math.min(100, Math.round((spent / budget) * 100)) + "%", height: "100%", borderRadius: 5, background: spent > budget ? C.expense : C.income }} />
@@ -781,7 +781,7 @@ function Assets({ assets, onAdd, onUpdate, onDelete }) {
     <div>
       <div style={{ ...card, marginBottom: 12 }}>
         <div style={{ fontSize: 13, color: C.sub, fontWeight: 600 }}>총 자산</div>
-        <div style={{ fontSize: 28, fontWeight: 800, margin: "6px 0" }}>{fmt(total)}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, margin: "4px 0" }}>{fmt(total)}</div>
         {byKind.map((x) => {
           const { color } = KINDS[x.kind];
           return (
@@ -867,7 +867,7 @@ function AddAssetSheet({ initial, onClose, onSave, onDelete }) {
         {isEdit ? "수정 완료" : "추가"}
       </button>
       {isEdit && onDelete && (
-        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
+        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
       )}
     </Sheet>
   );
@@ -958,7 +958,7 @@ function Memos({ notes, currentWho, onAdd, onUpdate, onDelete }) {
 
   return (
     <div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>메모</div>
+      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>메모</div>
       <div style={{ ...card, marginBottom: 12 }}>
         <textarea ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="메모를 입력하세요..." rows={3}
@@ -1219,7 +1219,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
         {isEdit ? "수정 완료" : "추가"}
       </button>
       {isEdit && onDelete && (
-        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
+        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
       )}
     </Sheet>
   );
@@ -1266,7 +1266,7 @@ function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDe
         {isEdit ? "수정 완료" : "추가"}
       </button>
       {isEdit && onDelete && (
-        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
+        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
       )}
     </Sheet>
   );
@@ -1317,9 +1317,9 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
           })}
         </div>
       </div>
-      <button onClick={() => name && amount && onSave({ name, amount: Number(amount), day, cat, who })} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: font }}>저장</button>
+      <button onClick={() => name && amount && onSave({ name, amount: Number(amount), day, cat, who })} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: font }}>저장</button>
       {initial && onDelete && (
-        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
+        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
       )}
     </Sheet>
   );
