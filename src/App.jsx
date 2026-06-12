@@ -23,26 +23,26 @@ const C = {
 };
 const WHO = { 종현: "#3568C9", 성은: "#E5559A", 같이: "#16A06A" };
 const CATS = {
-  식비:       { color: "#E05540", bg: "#FDE8E5", Icon: UtensilsCrossed },
-  외식:       { color: "#D47030", bg: "#FEEEE4", Icon: Utensils },
-  "카페/간식": { color: "#C84490", bg: "#FCE8F3", Icon: Coffee },
-  "술/유흥":  { color: "#9048E0", bg: "#F0E8FD", Icon: Wine },
-  "의류/미용": { color: "#D43C92", bg: "#FCE8F2", Icon: Shirt },
-  "의료/건강": { color: "#149068", bg: "#E5F5EE", Icon: Stethoscope },
-  교통:       { color: "#2880D4", bg: "#E5F0FB", Icon: Car },
-  주거:       { color: "#4C52D8", bg: "#EDEDFD", Icon: Building2 },
-  통신:       { color: "#0888D4", bg: "#E5F3FC", Icon: Wifi },
-  공과금:     { color: "#C07C08", bg: "#FEF3E3", Icon: Zap },
-  생활용품:   { color: "#6C58D0", bg: "#EDE9FB", Icon: ShoppingBasket },
-  "문화/여가": { color: "#5448D4", bg: "#EDEDFB", Icon: Clapperboard },
-  여행:       { color: "#109890", bg: "#E4F6F5", Icon: Plane },
-  교육:       { color: "#2858C8", bg: "#E8EEFA", Icon: BookOpen },
-  육아:       { color: "#C88010", bg: "#FEF3E3", Icon: Baby },
-  경조사:     { color: "#C83048", bg: "#FCE8EC", Icon: Gift },
-  기타:       { color: "#7A8880", bg: "#EEF0EF", Icon: MoreHorizontal },
-  급여:       { color: "#149068", bg: "#E5F5EE", Icon: Banknote },
-  부수입:     { color: "#2858C8", bg: "#E8EEFA", Icon: TrendingUp },
-  기타수입:   { color: "#7A8880", bg: "#EEF0EF", Icon: MoreHorizontal },
+  식비:       { color: "#D82A18", bg: "#FFD5CE", Icon: UtensilsCrossed },   // 선명한 빨강
+  외식:       { color: "#C85010", bg: "#FFE0C0", Icon: Utensils },           // 오렌지
+  "카페/간식": { color: "#B82888", bg: "#F9C8E8", Icon: Coffee },             // 로즈핑크
+  "술/유흥":  { color: "#6820C8", bg: "#E0C8FA", Icon: Wine },               // 퍼플
+  "의류/미용": { color: "#C01880", bg: "#F9C8EC", Icon: Shirt },              // 핫핑크
+  "의료/건강": { color: "#0A8050", bg: "#B8EDD8", Icon: Stethoscope },        // 민트그린
+  교통:       { color: "#1860B8", bg: "#C0D8F8", Icon: Car },                 // 하늘
+  주거:       { color: "#3838B0", bg: "#C8C8F4", Icon: Building2 },           // 인디고
+  통신:       { color: "#0678C0", bg: "#B8E4F8", Icon: Wifi },               // 시안
+  공과금:     { color: "#A86000", bg: "#FFE0A0", Icon: Zap },                // 앰버
+  생활용품:   { color: "#4830B0", bg: "#D4C8F8", Icon: ShoppingBasket },      // 라벤더
+  "문화/여가": { color: "#2820A0", bg: "#C8C8F0", Icon: Clapperboard },       // 바이올렛
+  여행:       { color: "#087878", bg: "#B0E8E4", Icon: Plane },              // 틸
+  교육:       { color: "#0848A8", bg: "#B8CCF4", Icon: BookOpen },           // 블루
+  육아:       { color: "#985800", bg: "#FFD89A", Icon: Baby },               // 피치골드
+  경조사:     { color: "#B81030", bg: "#F9C0CC", Icon: Gift },               // 로즈레드
+  기타:       { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },     // 세이지그레이
+  급여:       { color: "#0A8050", bg: "#B8EDD8", Icon: Banknote },           // 민트그린
+  부수입:     { color: "#0848A8", bg: "#B8CCF4", Icon: TrendingUp },         // 블루
+  기타수입:   { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },     // 세이지그레이
 };
 const EXPENSE_CATS = ["식비", "외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생활용품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
@@ -167,11 +167,11 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", flex: 1, WebkitOverflowScrolling: "touch" }}>
           {cats.map((c) => {
-            const { color, Icon } = CATS[c];
+            const { color, bg, Icon } = CATS[c];
             const sel = cat === c;
             return (
-              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 4, border: `1.5px solid ${sel ? color : C.line}`, borderRadius: 20, padding: "4px 9px", background: sel ? color + "14" : "#fff", color: sel ? color : C.sub, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font }}>
-                <Icon size={11} strokeWidth={2.2} />{c}
+              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 14, padding: "7px 10px", background: bg, color: sel ? color : C.sub, fontSize: 10, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, minWidth: 50, boxShadow: sel ? `0 0 0 1.5px ${color}` : "none" }}>
+                <Icon size={16} strokeWidth={2} color={color} />{c}
               </button>
             );
           })}
@@ -916,9 +916,16 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>카테고리</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {cats.map((c) => (
-            <button key={c} onClick={() => setCat(c)} style={{ padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${cat === c ? C.ink : C.line}`, background: cat === c ? C.ink : "#fff", color: cat === c ? "#fff" : C.ink, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: font }}>{c}</button>
-          ))}
+          {cats.map((c) => {
+            const { color, bg, Icon } = CATS[c] || CATS["기타"];
+            const sel = cat === c;
+            return (
+              <button key={c} onClick={() => setCat(c)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "10px 6px", borderRadius: 14, border: `2px solid ${sel ? color : "transparent"}`, background: bg, color: sel ? color : C.sub, fontWeight: sel ? 800 : 600, fontSize: 11, cursor: "pointer", fontFamily: font, width: "calc(20% - 5px)", minWidth: 58, boxShadow: sel ? `0 2px 8px ${color}40` : "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <Icon size={22} strokeWidth={1.8} color={color} />
+                {c}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div style={{ marginBottom: 12 }}>
@@ -1068,9 +1075,16 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.sub, marginBottom: 6 }}>카테고리</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {EXPENSE_CATS.map((c) => (
-            <button key={c} onClick={() => setCat(c)} style={{ padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${cat === c ? C.ink : C.line}`, background: cat === c ? C.ink : "#fff", color: cat === c ? "#fff" : C.ink, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: font }}>{c}</button>
-          ))}
+          {EXPENSE_CATS.map((c) => {
+            const { color, bg, Icon } = CATS[c] || CATS["기타"];
+            const sel = cat === c;
+            return (
+              <button key={c} onClick={() => setCat(c)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "10px 6px", borderRadius: 14, border: `2px solid ${sel ? color : "transparent"}`, background: bg, color: sel ? color : C.sub, fontWeight: sel ? 800 : 600, fontSize: 11, cursor: "pointer", fontFamily: font, width: "calc(20% - 5px)", minWidth: 58, boxShadow: sel ? `0 2px 8px ${color}40` : "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <Icon size={22} strokeWidth={1.8} color={color} />
+                {c}
+              </button>
+            );
+          })}
         </div>
       </div>
       <button onClick={() => name && amount && onSave({ name, amount: Number(amount), day, cat, who })} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: font }}>저장</button>
