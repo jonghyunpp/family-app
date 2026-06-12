@@ -326,18 +326,15 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
 function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("외식");
-  const [type, setType] = useState("expense");
   const inputRef = useRef(null);
 
-  const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
+  const ALL_CATS = [...EXPENSE_CATS, ...INCOME_CATS];
+  const inferredType = INCOME_CATS.includes(cat) ? "income" : "expense";
 
-  useEffect(() => {
-    setCat(type === "expense" ? "외식" : "급여");
-  }, [type]);
-
-  const handleSave = () => {
+  const handleSave = (saveType, saveCat) => {
     const n = Number(amount);
     if (!n) return;
+    const finalCat = saveCat ?? cat;
     let dy, mo, yr;
     if (date) {
       [yr, mo, dy] = date.split("-").map(Number);
@@ -345,12 +342,12 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
       const today = new Date();
       dy = today.getDate(); mo = today.getMonth() + 1; yr = today.getFullYear();
     }
-    onSave({ type, cat, amount: n, month: mo, day: dy, year: yr, who: defaultWho, memo: "", fixed: false });
+    onSave({ type: saveType, cat: finalCat, amount: n, month: mo, day: dy, year: yr, who: defaultWho, memo: "", fixed: false });
     setAmount("");
     inputRef.current?.blur();
   };
 
-  const accentColor = type === "expense" ? C.moneyOut : C.moneyIn;
+  const accentColor = inferredType === "expense" ? C.moneyOut : C.moneyIn;
 
   return (
     <div style={{ position: "fixed", bottom: "calc(max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px)))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "8px 12px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
@@ -361,7 +358,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
       {/* 카테고리 + 상세입력 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", flex: 1, WebkitOverflowScrolling: "touch" }}>
-          {cats.map((c) => {
+          {ALL_CATS.map((c) => {
             const { color, bg } = CATS[c];
             const sel = cat === c;
             return (
@@ -376,23 +373,26 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
           <Plus size={15} strokeWidth={2.5} />
         </button>
       </div>
-      {/* 지출/수입 + 금액 + 저장 */}
+      {/* 금액 + 지출/수입 저장 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* 지출/수입 세로 버튼 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-          <button onClick={() => setType("expense")} style={{ border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, background: type === "expense" ? C.moneyOut : C.soft, color: type === "expense" ? "#fff" : C.sub }}>지출</button>
-          <button onClick={() => setType("income")} style={{ border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: font, background: type === "income" ? C.moneyIn : C.soft, color: type === "income" ? "#fff" : C.sub }}>수입</button>
-        </div>
-        {/* 금액 입력 */}
         <input
           ref={inputRef} type="text" inputMode="numeric" value={fmtInput(amount)}
           onChange={(e) => setAmount(parseInput(e.target.value))}
-          onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          onKeyDown={(e) => { if (e.key === "Enter" && amount) handleSave(type); }}
           placeholder="0"
-          style={{ width: 120, border: "none", borderBottom: `2px solid ${accentColor}`, fontSize: 22, fontWeight: 800, padding: "2px 0", textAlign: "right", fontFamily: font, background: "none", color: C.ink, outline: "none" }}
+          style={{ flex: 1, border: "none", borderBottom: `2px solid ${accentColor}`, fontSize: 22, fontWeight: 800, padding: "2px 0", textAlign: "right", fontFamily: font, background: "none", color: C.ink, outline: "none", minWidth: 0 }}
         />
         <span style={{ fontSize: 13, fontWeight: 600, color: C.sub, flexShrink: 0 }}>원</span>
-        <button onClick={handleSave} disabled={!amount} style={{ flex: 1, border: "none", borderRadius: 12, background: amount ? C.ink : C.line, color: amount ? "#fff" : C.sub, padding: "11px 0", fontWeight: 800, fontSize: 15, cursor: amount ? "pointer" : "default", fontFamily: font }}>저장</button>
+        <button
+          onClick={() => handleSave("expense", INCOME_CATS.includes(cat) ? "외식" : cat)}
+          disabled={!amount}
+          style={{ flexShrink: 0, border: "none", borderRadius: 12, background: amount ? C.moneyOut : C.line, color: amount ? "#fff" : C.sub, padding: "11px 14px", fontWeight: 800, fontSize: 14, cursor: amount ? "pointer" : "default", fontFamily: font }}
+        >지출</button>
+        <button
+          onClick={() => handleSave("income", EXPENSE_CATS.includes(cat) ? "급여" : cat)}
+          disabled={!amount}
+          style={{ flexShrink: 0, border: "none", borderRadius: 12, background: amount ? C.moneyIn : C.line, color: amount ? "#fff" : C.sub, padding: "11px 14px", fontWeight: 800, fontSize: 14, cursor: amount ? "pointer" : "default", fontFamily: font }}
+        >수입</button>
       </div>
     </div>
   );
@@ -506,19 +506,17 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx, appTitle = "�
           <span>예산 {fmt(budget)}</span><span>{pct}% 사용</span>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
-        <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>수입</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.moneyIn, marginTop: 3 }}>{fmt(totals.income)}</div>
-        </div>
-        <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>지출</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.moneyOut, marginTop: 3 }}>{fmt(totals.expense)}</div>
-        </div>
-        <div style={{ ...card, flex: 1, padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>순수입</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: totals.income - totals.expense >= 0 ? C.moneyIn : C.moneyOut, marginTop: 4 }}>{totals.income - totals.expense >= 0 ? "+" : ""}{fmt(totals.income - totals.expense)}</div>
-        </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
+        {[
+          { label: "수입", value: totals.income, color: C.moneyIn, prefix: "" },
+          { label: "지출", value: totals.expense, color: C.moneyOut, prefix: "" },
+          { label: "순수입", value: totals.income - totals.expense, color: totals.income - totals.expense >= 0 ? C.moneyIn : C.moneyOut, prefix: totals.income - totals.expense >= 0 ? "+" : "" },
+        ].map(({ label, value, color, prefix }) => (
+          <div key={label} style={{ ...card, flex: 1, padding: "12px 10px", minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color, lineHeight: 1.3, wordBreak: "keep-all", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{prefix}{fmt(value)}</div>
+          </div>
+        ))}
       </div>
       {recent.length > 0 && (
         <div style={card}>
