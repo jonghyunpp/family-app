@@ -6,7 +6,7 @@ import {
   MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
   Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
-  CreditCard, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload, Repeat2,
+  CreditCard, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload, Repeat2, X,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc,
@@ -335,7 +335,7 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
   );
 }
 // ──────── 빠른 입력 바 ────────
-function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date, darkMode = false }) {
+function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, onClose, date, darkMode = false }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("외식");
   const inputRef = useRef(null);
@@ -357,6 +357,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date, darkM
     onSave({ type: saveType, cat: finalCat, amount: n, month: mo, day: dy, year: yr, who: defaultWho, memo: "", fixed: false });
     setAmount("");
     inputRef.current?.blur();
+    onClose?.();
   };
 
   const accentColor = inferredType === "expense" ? C.moneyOut : C.moneyIn;
@@ -384,6 +385,12 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date, darkM
         <button onClick={() => onDetail && onDetail(date)} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.soft, color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <Plus size={15} strokeWidth={2.5} />
         </button>
+        {/* 닫기 버튼 */}
+        {onClose && (
+          <button onClick={onClose} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, border: "none", background: "transparent", color: C.sub, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <X size={16} strokeWidth={2.2} />
+          </button>
+        )}
       </div>
       {/* 금액 + 지출/수입 저장 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1568,7 +1575,8 @@ export default function App() {
   const [showImport, setShowImport] = useState(false);
   const [addDay, setAddDay] = useState(null); // 일정 추가 시 기본 날짜
   const [addTxDate, setAddTxDate] = useState(null); // 달력에서 날짜 선택 후 내역 추가
-  const [calSel, setCalSel] = useState(now.getDate()); // 달력에서 선택된 날
+  const [calSel, setCalSel] = useState(null); // 달력에서 선택된 날
+  const [showQuickBar, setShowQuickBar] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
   const [editRecur, setEditRecur] = useState(null);
@@ -1896,11 +1904,11 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ padding: "10px 18px", paddingBottom: `calc(${mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120}px + env(safe-area-inset-bottom, 0px))` }}>
+      <div style={{ padding: "10px 18px", paddingBottom: `calc(${mode === "money" ? (showQuickBar ? 180 : 90) : 90}px + env(safe-area-inset-bottom, 0px))` }}>
         {mode === "money" && (
           <>
             {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} appTitle={appTitle} />}
-            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} sel={calSel} onSel={setCalSel} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
+            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} sel={calSel} onSel={(d) => { setCalSel(d); if (d) setShowQuickBar(true); else setShowQuickBar(false); }} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
             {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
             {tab === "asset" && <Assets assets={assets} txs={txs} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />}
@@ -1911,9 +1919,27 @@ export default function App() {
         {mode === "memo" && <Memos notes={notes} currentWho={currentWho} onAdd={addNote} onUpdate={updateNote} onDelete={deleteNote} />}
       </div>
 
-      {mode === "money" && (tab === "home" || tab === "cal") && (
-        <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={(d) => { setAddTxDate(d || null); setShowAdd(true); }}
-          date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null} darkMode={darkMode} />
+      {/* 퀵바 — 홈/달력 탭에서 showQuickBar 시 표시 */}
+      {mode === "money" && (tab === "home" || tab === "cal") && showQuickBar && (
+        <QuickAddBar
+          who={currentWho}
+          onSave={(t) => { addTx(t); setShowQuickBar(false); }}
+          onClose={() => { setShowQuickBar(false); if (tab === "cal") setCalSel(null); }}
+          onDetail={(d) => { setAddTxDate(d || null); setShowAdd(true); setShowQuickBar(false); }}
+          date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* + FAB — 홈 탭 (퀵바 닫혀있을 때) */}
+      {mode === "money" && tab === "home" && !showQuickBar && (
+        <button
+          onClick={() => setShowQuickBar(true)}
+          aria-label="내역 추가"
+          style={{ position: "fixed", bottom: "calc(max(80px, calc(env(safe-area-inset-bottom, 0px) + 72px)))", right: "max(18px, calc(50% - 222px))", width: 52, height: 52, borderRadius: 26, border: "none", background: C.income, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(16,160,106,0.4)", cursor: "pointer", zIndex: 22, touchAction: "manipulation" }}
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>
       )}
 
       {mode === "schedule" && (
@@ -1925,7 +1951,7 @@ export default function App() {
       {mode === "money" && (
         <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: darkMode ? `${C.card}f2` : "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", display: "flex", paddingTop: 10, paddingBottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))", zIndex: 25 }}>
           {tabs.map(([k, label, Icon]) => (
-            <button key={k} onClick={() => { if (k !== tab) { const n = new Date(); setYear(n.getFullYear()); setMonthRaw(n.getMonth() + 1); } setTab(k); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
+            <button key={k} onClick={() => { if (k !== tab) { const n = new Date(); setYear(n.getFullYear()); setMonthRaw(n.getMonth() + 1); setShowQuickBar(false); setCalSel(null); } setTab(k); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
               <Icon size={22} strokeWidth={tab === k ? 2.4 : 1.8} style={{ display: "block", margin: "0 auto" }} />
               <div style={{ fontSize: 10.5, fontWeight: tab === k ? 700 : 500, marginTop: 3 }}>{label}</div>
             </button>
