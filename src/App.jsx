@@ -42,8 +42,16 @@ const CATS = {
   기타:       { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },     // 세이지그레이
   급여:       { color: "#0A8050", bg: "#B8EDD8", Icon: Banknote },           // 민트그린
   부수입:     { color: "#0848A8", bg: "#B8CCF4", Icon: TrendingUp },         // 블루
-  기타수입:   { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },     // 세이지그레이
+  기타수입:   { color: "#7C6840", bg: "#EDE3C8", Icon: MoreHorizontal },     // 황토
 };
+// 알 수 없는 카테고리: 이름 해시로 고유 색상 생성 (fallback이 항상 기타색으로 겹치는 문제 방지)
+function getCatInfo(name) {
+  if (CATS[name]) return CATS[name];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (name.charCodeAt(i) + ((h << 5) - h)) | 0;
+  const hue = ((Math.abs(h) % 36) * 10 + 10) % 360;
+  return { color: `hsl(${hue},60%,40%)`, bg: `hsl(${hue},55%,88%)`, Icon: MoreHorizontal };
+}
 const EXPENSE_CATS = ["식비", "외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생활용품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
 
@@ -252,7 +260,7 @@ function WhoTag({ who }) {
   return <span style={{ fontSize: 11, fontWeight: 700, color: WHO[who] || C.sub, background: (WHO[who] || C.sub) + "14", padding: "2px 8px", borderRadius: 8 }}>{who}</span>;
 }
 function CatBadge({ cat, size = 38 }) {
-  const { color, bg, Icon } = CATS[cat] || CATS["기타"];
+  const { color, bg, Icon } = getCatInfo(cat);
   return (
     <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Icon size={size * 0.5} strokeWidth={2.2} />
@@ -551,8 +559,8 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
 // ──────── 가계부: 통계 ────────
 function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx }) {
   const [openCat, setOpenCat] = useState(null);
-  const COLORS = byCat.map((x) => (CATS[x.name] || CATS["기타"]).color);
-  const PASTEL_COLORS = byCat.map((x) => (CATS[x.name] || CATS["기타"]).bg);
+  const COLORS = byCat.map((x) => getCatInfo(x.name).color);
+  const PASTEL_COLORS = byCat.map((x) => getCatInfo(x.name).bg);
   const diff = prevExpense != null ? totalExpense - prevExpense : null;
 
   // 담당자별 지출
@@ -643,14 +651,14 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
           )}
           <div style={card}>
             {byCat.map((item) => {
-              const { color, bg } = CATS[item.name] || CATS["기타"];
+              const { color } = getCatInfo(item.name);
               const pct = Math.round((item.value / totalExpense) * 100);
               const isOpen = openCat === item.name;
               const catTxs = txs.filter((t) => t.cat === item.name && t.type === "expense");
               return (
                 <div key={item.name}>
                   <div onClick={() => setOpenCat(isOpen ? null : item.name)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer" }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 6, background: bg, border: `2px solid ${color}`, flexShrink: 0 }} />
+                    <div style={{ width: 12, height: 12, borderRadius: 6, background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{item.name}</div>
                     <div style={{ fontSize: 13, color: C.sub }}>{pct}%</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{fmt(item.value)}</div>
@@ -1069,10 +1077,12 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0" }}>
                   <button onClick={() => onToggle(t.id)} style={{ width: 22, height: 22, borderRadius: 8, border: `2px solid ${pc}`, background: "#fff", cursor: "pointer", flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{t.text}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{t.text}</div>
+                      {t.dueDate && <span style={{ fontSize: 14, fontWeight: 700, color: isOverdue ? C.expense : isDueToday ? "#F59E0B" : C.ink, flexShrink: 0 }}>{isOverdue ? "⚠️" : isDueToday ? "🔴" : ""} {t.dueDate.slice(5).replace("-", "/")}</span>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                       {t.priority && <span style={{ fontSize: 10, fontWeight: 700, color: pc, background: pc + "14", padding: "1px 6px", borderRadius: 6 }}>{t.priority}</span>}
-                      {t.dueDate && <span style={{ fontSize: 11, fontWeight: 600, color: isOverdue ? C.expense : isDueToday ? "#F59E0B" : C.sub }}>{isOverdue ? "⚠️ " : isDueToday ? "오늘 · " : ""}{t.dueDate.slice(5).replace("-", "/")}</span>}
                       <WhoTag who={t.who} />
                     </div>
                   </div>
