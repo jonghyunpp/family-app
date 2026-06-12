@@ -1547,6 +1547,7 @@ export default function App() {
   const [month, setMonthRaw] = useState(now.getMonth() + 1);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "1");
   const [showSettings, setShowSettings] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -1817,7 +1818,26 @@ export default function App() {
   return (
     <div style={{ fontFamily: font, background: C.bg, minHeight: "100vh", color: C.ink, maxWidth: 480, margin: "0 auto", position: "relative", letterSpacing: "-0.01em" }}>
       {/* 상단 모드 전환 */}
-      <div style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(244,246,245,0.92)", backdropFilter: "blur(12px)", padding: "8px 14px 7px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(244,246,245,0.92)", backdropFilter: "blur(12px)", padding: "6px 14px 7px" }}>
+        {/* 앱 타이틀 */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6, minHeight: 24 }}>
+          {editingTitle ? (
+            <input
+              autoFocus
+              defaultValue={appTitle}
+              onBlur={(e) => { const v = e.target.value.trim() || "우리집"; setAppTitleState(v); saveDisplay({ appTitle: v }); setEditingTitle(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingTitle(false); }}
+              style={{ fontFamily: font, fontSize: 15, fontWeight: 800, color: C.ink, textAlign: "center", border: "none", borderBottom: `2px solid ${C.income}`, outline: "none", background: "transparent", width: 160, letterSpacing: "-0.01em" }}
+            />
+          ) : (
+            <button onClick={() => setEditingTitle(true)} style={{ border: "none", background: "none", cursor: "pointer", padding: "2px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: "-0.01em" }}>{appTitle}</span>
+              <Pencil size={11} strokeWidth={2} color={C.sub} />
+            </button>
+          )}
+        </div>
+        {/* 모드 탭 + 우측 버튼 */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div style={{ display: "flex", background: "#E8ECEA", borderRadius: 12, padding: 3, gap: 1, flexShrink: 0 }}>
           {modes.map(([k, label, Icon]) => {
             const active = mode === k;
@@ -1835,6 +1855,7 @@ export default function App() {
               {currentWho[0]}
             </div>
           </button>
+        </div>
         </div>
       </div>
 
