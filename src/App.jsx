@@ -6,7 +6,7 @@ import {
   Clapperboard, MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
   Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
-  Wifi, Zap, CreditCard, Wine, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download,
+  Wifi, Zap, CreditCard, Wine, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc,
@@ -46,6 +46,160 @@ const CATS = {
 };
 const EXPENSE_CATS = ["식비", "외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생활용품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
+
+// ──────── 이용내역서 파서 ────────
+const CAT_KW = {
+  "식비":      ["마트","편의점","GS25","CU","세븐","이마트","롯데마트","홈플러스","코스트코","농협하나로","쿠팡로켓","SSG","노브랜드","트레이더스","다이소","위마트"],
+  "외식":      ["배달의민족","배민","쿠팡이츠","요기요","맥도날드","버거킹","KFC","롯데리아","서브웨이","치킨","피자","족발","보쌈","냉면","해장국","분식","김밥","고기집","삼겹","갈비","순대","떡볶이","초밥","덮밥","짜장","짬뽕","돈까스","우동","라멘","식당","음식점"],
+  "카페/간식": ["스타벅스","이디야","투썸","커피빈","할리스","탐앤탐스","빽다방","메가커피","컴포즈","카페","베이커리","파리바게뜨","뚜레쥬르","설빙","베스킨","던킨","도넛","마카롱","크리스피","공차","코코","요거트","와플"],
+  "술/유흥":   ["포차","호프","술집","BAR","bar","주점","나이트","클럽","노래방","PC방","오락실","경마","카지노"],
+  "의류/미용": ["무신사","지그재그","29cm","에이블리","미용실","헤어","네일","살롱","뷰티","아모레","LG생활","이니스프리","에뛰드","H&M","자라","유니클로","스파오","탑텐","신세계몰","롯데온","올리브영"],
+  "의료/건강": ["병원","의원","약국","한의원","치과","안과","이비인후과","피부과","정형외과","내과","소아과","산부인과","헬스","피트니스","스포츠센터","수영","요가","필라테스","GX클럽"],
+  "교통":      ["주유소","SK에너지","GS칼텍스","S-OIL","에쓰오일","현대오일","알뜰주유","택시","카카오T","우버","티머니","하이패스","주차","EX고속","KTX","SRT","기차","고속버스","항공","대한항공","아시아나","제주항공","진에어","에어서울","티웨이","이스타"],
+  "주거":      ["관리비","아파트관리","월세","보증금","인테리어","가구","청소업체","이사","용달"],
+  "통신":      ["SKT","SK텔레콤","KT","LGU+","LG유플러스","통신비","핸드폰","알뜰폰","넷플릭스","왓챠","웨이브","시즌","왓챠","디즈니","애플","구글","유튜브프리미엄","스포티파이","멜론"],
+  "공과금":    ["전기세","전기요금","도시가스","수도요금","한전","한국전력","지역난방","전기도시"],
+  "생활용품":  ["이케아","쿠쿠","리빙","청소","세제","생필품","락앤락","3M","크린랩"],
+  "문화/여가": ["CGV","롯데시네마","메가박스","교보문고","영풍문고","알라딘","예스24","도서","공연","전시","박물관","멜론","지니","스팀","닌텐도","플레이스테이션"],
+  "여행":      ["호텔","에어비앤비","야놀자","여기어때","여행사","투어","리조트","펜션","모텔","게스트하우스"],
+  "교육":      ["학원","교육","과외","강의","학습지","웅진","대교","클래스101","인프런","패스트캠퍼스","유데미","구름"],
+  "육아":      ["유치원","어린이집","키즈","장난감","레고","아동복","베이비","분유","기저귀","맘스클럽"],
+  "경조사":    ["화환","꽃집","플라워","장례","예식"],
+  "급여":      ["급여","월급","임금","봉급","급료"],
+  "부수입":    ["이자","배당","환급","캐시백"],
+};
+
+function guessCat(desc) {
+  if (!desc) return "기타";
+  const d = desc.replace(/\s/g, "");
+  for (const [cat, kws] of Object.entries(CAT_KW)) {
+    if (kws.some((kw) => d.includes(kw.replace(/\s/g, "")))) return cat;
+  }
+  return "기타";
+}
+function parseAmt(v) { return Math.abs(Number(String(v || "").replace(/[^0-9.-]/g, ""))) || 0; }
+function parseDateStr(v) {
+  if (!v) return {};
+  const s = String(v).replace(/[.\-\/년월일\s]/g, "").replace(/T.*/,"");
+  if (s.length >= 8) return { year: +s.slice(0,4), month: +s.slice(4,6), day: +s.slice(6,8) };
+  if (s.length === 6) return { year: 2000 + +s.slice(0,2), month: +s.slice(2,4), day: +s.slice(4,6) };
+  return {};
+}
+async function parseStatement(file) {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", codepage: 949 });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+  // 헤더 행 찾기 (비어있지 않은 첫 행)
+  let hi = 0;
+  for (let i = 0; i < Math.min(15, raw.length); i++) {
+    if (raw[i].filter((c) => c !== "").length >= 3) { hi = i; break; }
+  }
+  const headers = raw[hi].map((h) => String(h).trim());
+  const hj = headers.join(",");
+
+  // 컬럼 인덱스 자동 감지
+  const col = (kws) => headers.findIndex((h) => kws.some((k) => h.includes(k)));
+  const dateCol = col(["이용일","거래일","날짜","일자"]);
+  const descCol = col(["가맹점명","이용가맹점","적요명","적요","내용","거래내용"]);
+  const amtCol  = col(["이용금액","출금금액","출금","찾으신","거래금액"]);
+  const inCol   = col(["입금금액","입금","맡기신"]);
+  const isCard  = hj.includes("가맹점") || hj.includes("이용금액");
+
+  const results = [];
+  for (let i = hi + 1; i < raw.length; i++) {
+    const row = raw[i];
+    if (row.every((c) => c === "" || c === 0)) continue;
+    const dateObj = parseDateStr(row[dateCol >= 0 ? dateCol : 0]);
+    if (!dateObj.year) continue;
+    const desc = String(row[descCol >= 0 ? descCol : 1] || "").trim();
+    const out = parseAmt(row[amtCol >= 0 ? amtCol : (isCard ? 2 : 3)]);
+    const inp = inCol >= 0 ? parseAmt(row[inCol]) : 0;
+    const amount = out > 0 ? out : inp;
+    if (!amount) continue;
+    const type = inp > 0 && out === 0 ? "income" : "expense";
+    const cat = guessCat(desc);
+    results.push({ ...dateObj, type, cat, amount, memo: desc, who: "같이", fixed: false });
+  }
+  return results;
+}
+
+function ImportSheet({ onClose, onBulkSave, currentWho }) {
+  const [step, setStep] = useState("upload");
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const fileRef = useRef(null);
+
+  const handleFile = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setLoading(true); setErr("");
+    try {
+      const parsed = await parseStatement(f);
+      if (!parsed.length) setErr("내역을 찾을 수 없어요. 파일을 확인해주세요.");
+      else { setRows(parsed); setStep("preview"); }
+    } catch (ex) { setErr("읽기 실패: " + ex.message); }
+    setLoading(false);
+  };
+
+  const updateRow = (i, field, val) =>
+    setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
+  const removeRow = (i) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+
+  return (
+    <Sheet onClose={onClose} title="내역 불러오기">
+      {step === "upload" && (
+        <div style={{ textAlign: "center", padding: "24px 0" }}>
+          <div style={{ fontSize: 42, marginBottom: 12 }}>📂</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>은행·카드 이용내역 파일</div>
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 24, lineHeight: 1.8 }}>
+            KB국민 · 신한 · 삼성 · 농협 · 롯데 · 현대 · 우리<br/>
+            CSV / XLSX 파일을 선택해주세요
+          </div>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
+          <button onClick={() => fileRef.current?.click()} disabled={loading}
+            style={{ padding: "14px 36px", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
+            {loading ? "분석 중..." : "파일 선택"}
+          </button>
+          {err && <div style={{ marginTop: 16, color: C.expense, fontSize: 13 }}>{err}</div>}
+        </div>
+      )}
+      {step === "preview" && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{rows.length}건 인식 — 카테고리 확인 후 저장</div>
+            <button onClick={() => { setStep("upload"); setRows([]); setErr(""); }}
+              style={{ fontSize: 12, color: C.sub, border: "none", background: "none", cursor: "pointer" }}>다시 선택</button>
+          </div>
+          <div style={{ maxHeight: "52vh", overflowY: "auto", marginBottom: 12 }}>
+            {rows.map((r, i) => {
+              const { color, bg } = CATS[r.cat] || CATS["기타"];
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
+                  <select value={r.cat} onChange={(e) => updateRow(i, "cat", e.target.value)}
+                    style={{ background: bg, color, fontWeight: 700, border: `1.5px solid ${color}`, borderRadius: 8, padding: "4px 5px", fontSize: 11, fontFamily: font, flexShrink: 0, maxWidth: 80 }}>
+                    {(r.type === "income" ? INCOME_CATS : EXPENSE_CATS).map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                  <div style={{ flex: 1, fontSize: 12, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.sub }}>{r.memo}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: r.type === "income" ? C.moneyIn : C.moneyOut, flexShrink: 0 }}>{fmt(r.amount)}</div>
+                  <div style={{ fontSize: 11, color: C.sub, flexShrink: 0 }}>{r.month}/{r.day}</div>
+                  <button onClick={() => removeRow(i)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 0, flexShrink: 0 }}><Trash2 size={13} /></button>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={() => onBulkSave(rows.map((r) => ({ ...r, who: r.who || currentWho })))}
+            style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: C.ink, color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: font }}>
+            {rows.length}건 저장
+          </button>
+        </>
+      )}
+    </Sheet>
+  );
+}
 const KINDS = { 예금: { color: "#16A06A", Icon: Landmark }, 적금: { color: "#F2A33C", Icon: PiggyBank }, 주식: { color: "#3568C9", Icon: LineChart } };
 
 const fmt = (n) => (n || 0).toLocaleString("ko-KR") + "원";
@@ -75,7 +229,7 @@ function WhoTag({ who }) {
 function CatBadge({ cat, size = 38 }) {
   const { color, bg, Icon } = CATS[cat] || CATS["기타"];
   return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Icon size={size * 0.5} strokeWidth={2.2} />
     </div>
   );
@@ -1193,6 +1347,7 @@ export default function App() {
   const [month, setMonthRaw] = useState(now.getMonth() + 1);
   const [showAdd, setShowAdd] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [addDay, setAddDay] = useState(null); // 일정 추가 시 기본 날짜
   const [editTx, setEditTx] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
@@ -1257,6 +1412,10 @@ export default function App() {
   // ── CRUD 핸들러 ──
   const addTx = useCallback(async (t) => {
     await addDoc(collection(db, "transactions"), { ...t, createdAt: serverTimestamp() });
+  }, []);
+  const bulkAddTxs = useCallback(async (rows) => {
+    await Promise.all(rows.map((t) => addDoc(collection(db, "transactions"), { ...t, createdAt: serverTimestamp() })));
+    setShowImport(false);
   }, []);
   const updateTx = useCallback(async (id, t) => {
     await updateDoc(doc(db, "transactions", id), t);
@@ -1413,6 +1572,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {mode === "money" && <button onClick={() => setShowSearch(true)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Search size={19} /></button>}
           {mode === "money" && <button onClick={exportExcel} title="엑셀 내보내기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Download size={19} /></button>}
+          {mode === "money" && <button onClick={() => setShowImport(true)} title="내역 불러오기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Upload size={19} /></button>}
           <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex" }}>
             <div style={{ width: 32, height: 32, borderRadius: 16, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>
               {currentWho === "종현" ? "J" : "S"}
@@ -1483,6 +1643,7 @@ export default function App() {
           onDelete={() => { deleteRecurring(editRecur.id); setEditRecur(null); }} />
       )}
       {showSearch && <TxSearch txs={txs} onClose={() => setShowSearch(false)} onTx={openTx} />}
+      {showImport && <ImportSheet onClose={() => setShowImport(false)} onBulkSave={bulkAddTxs} currentWho={currentWho} />}
     </div>
   );
 }
