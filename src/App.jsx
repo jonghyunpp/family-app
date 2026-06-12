@@ -1219,8 +1219,9 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
 }
 
 // ──────── 시트: 내역 추가/수정 ────────
-function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring }) {
+function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", onClose, onSave, onDelete, onSaveRecurring, onUpdateRecurring, onDeleteRecurring }) {
   const isEdit = !!initial;
+  const isRid = !!initial?.rid; // 고정지출(recurring) 항목 여부
   const [type, setType] = useState(initial?.type || "expense");
   const [cat, setCat] = useState(initial?.cat || "외식");
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
@@ -1231,7 +1232,7 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
     if (initialDate) return initialDate;
     return `${year}-${String(month).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`;
   });
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(isRid); // 고정지출이면 체크된 상태로 시작
   const [isInstallment, setIsInstallment] = useState(initial?.installment || false);
   const [instTotal, setInstTotal] = useState(initial?.installmentTotal || 1);
   const [instCurrent, setInstCurrent] = useState(initial?.installmentCurrent || 1);
@@ -1247,8 +1248,21 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
     const [txYear, txMonth, txDay] = dateStr ? dateStr.split("-").map(Number) : [year, month, 1];
     const t = { type, cat, amount: Number(amount), memo, who, day: txDay, month: txMonth, year: txYear, fixed: false };
     if (isInstallment) { Object.assign(t, { installment: true, installmentTotal: instTotal, installmentCurrent: instCurrent }); }
-    if (isRecurring && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day: txDay, cat, who }); }
-    else { onSave(t); }
+    const recurData = { name: memo || cat, amount: Number(amount), day: txDay, cat, who };
+    if (isRid) {
+      // 기존 고정지출 수정
+      if (isRecurring && onUpdateRecurring) { onUpdateRecurring(initial.rid, recurData); }
+      else if (!isRecurring) {
+        // 고정 해제 → recurring 삭제 + 이번 달만 일회성 내역으로 저장
+        if (onDeleteRecurring) onDeleteRecurring(initial.rid);
+        if (onSave) onSave(t);
+      }
+    } else if (isRecurring && onSaveRecurring && !isInstallment) {
+      // 새 고정지출 등록
+      onSaveRecurring(recurData);
+    } else {
+      onSave(t);
+    }
   };
   const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
   return (
@@ -1347,7 +1361,9 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
         {isEdit ? "수정 완료" : "추가"}
       </button>
       {isEdit && onDelete && (
-        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>삭제</button>
+        <button onClick={onDelete} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 14, border: `1px solid ${C.expense}`, background: "#fff", color: C.expense, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: font }}>
+          {isRid ? "고정지출 삭제 (매월 해제)" : "삭제"}
+        </button>
       )}
     </Sheet>
   );
@@ -1826,10 +1842,6 @@ const addAsset = useCallback(async (a) => {
   }, [monthTxs, month, year]);
 
   const openTx = (t) => {
-    if (t.fixed && t.rid) {
-      const r = recurring.find((x) => x.id === t.rid);
-      if (r) { setEditRecur(r); return; }
-    }
     // 할부 파생 거래는 원본 거래를 찾아서 열기
     if (t._instDerived) {
       const orig = txs.find((x) => x.id === t.id);
@@ -1972,9 +1984,11 @@ const addAsset = useCallback(async (a) => {
       )}
       {editTx && (
         <AddTxSheet month={editTx.month} year={editTx.year} initial={editTx} onClose={() => setEditTx(null)}
-          onSave={(t) => { updateTx(editTx.id, t); setEditTx(null); }}
+          onSave={(t) => { if (!editTx.rid) updateTx(editTx.id, t); setEditTx(null); }}
           onSaveRecurring={(r) => { addRecurring(r); setEditTx(null); }}
-          onDelete={() => { deleteTx(editTx.id); setEditTx(null); }} />
+          onUpdateRecurring={(rid, r) => { updateRecurring(rid, r); setEditTx(null); }}
+          onDeleteRecurring={(rid) => { deleteRecurring(rid); }}
+          onDelete={() => { if (editTx.rid) { deleteRecurring(editTx.rid); } else { deleteTx(editTx.id); } setEditTx(null); }} />
       )}
       {editEvent && (
         <AddEventSheet month={editEvent.month} year={editEvent.year} initial={editEvent} onClose={() => setEditEvent(null)}
