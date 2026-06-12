@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Home as HomeIcon, CalendarDays, PieChart as ChartPie, Target, Wallet, Plus,
@@ -6,7 +7,7 @@ import {
   Clapperboard, MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
   Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
-  Wifi, Zap, CreditCard, Wine, Shirt, Building2, Plane, BookOpen, Gift,
+  Wifi, Zap, CreditCard, Wine, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc,
@@ -203,6 +204,40 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
   );
 }
 
+// ──────── 내역 검색 ────────
+function TxSearch({ txs, onClose, onTx }) {
+  const [q, setQ] = useState("");
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  const results = useMemo(() => {
+    if (!q.trim()) return [];
+    const lq = q.toLowerCase();
+    return txs.filter((t) =>
+      (t.memo || "").toLowerCase().includes(lq) ||
+      (t.cat || "").toLowerCase().includes(lq) ||
+      String(t.amount).includes(lq)
+    ).slice(0, 30);
+  }, [q, txs]);
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "#fff", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${C.line}` }}>
+        <Search size={18} color={C.sub} />
+        <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="메모, 카테고리, 금액 검색..." style={{ flex: 1, border: "none", fontSize: 16, fontFamily: font, outline: "none", color: C.ink }} />
+        <button onClick={onClose} style={{ border: "none", background: "none", fontSize: 16, color: C.sub, cursor: "pointer", fontFamily: font, fontWeight: 600 }}>닫기</button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+        {q && results.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 14, padding: "40px 0" }}>검색 결과가 없어요</div>}
+        {results.map((t, i) => (
+          <div key={t.id}>
+            {i > 0 && <div style={{ height: 1, background: C.line }} />}
+            <TxRow t={t} showDate onClick={() => { onTx(t); onClose(); }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Sheet({ onClose, children, title }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -323,16 +358,45 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
 }
 
 // ──────── 가계부: 통계 ────────
-function Stats({ byCat, totalExpense, prevExpense, txs, month, setMonth, onTx }) {
+function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx }) {
   const [openCat, setOpenCat] = useState(null);
   const COLORS = byCat.map((x) => (CATS[x.name] || CATS["기타"]).color);
   const diff = prevExpense != null ? totalExpense - prevExpense : null;
+
+  // 최근 6개월 추이
+  const trend = useMemo(() => {
+    const result = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(year, month - 1 - i, 1);
+      const m = d.getMonth() + 1, y = d.getFullYear();
+      const total = (allTxs || []).filter((t) => t.month === m && (t.year || year) === y && t.type === "expense").reduce((s, t) => s + t.amount, 0);
+      result.push({ label: `${m}월`, value: total, current: i === 0 });
+    }
+    return result;
+  }, [allTxs, month, year]);
+  const maxTrend = Math.max(...trend.map((t) => t.value), 1);
+
   return (
     <div>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>{month}월 통계</div>
         <MonthNav month={month} setMonth={setMonth} />
       </header>
+      {/* 6개월 추이 차트 */}
+      <div style={{ ...card, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 12 }}>최근 6개월 지출</div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
+          {trend.map((t) => (
+            <div key={t.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ fontSize: 9, color: t.current ? C.moneyOut : C.sub, fontWeight: t.current ? 800 : 500 }}>
+                {t.value > 0 ? (t.value >= 10000 ? `${Math.round(t.value / 10000)}만` : "") : ""}
+              </div>
+              <div style={{ width: "100%", background: t.current ? C.moneyOut : C.line, borderRadius: 4, transition: "height .3s", height: t.value > 0 ? `${Math.max(4, Math.round((t.value / maxTrend) * 56))}px` : "4px" }} />
+              <div style={{ fontSize: 10, color: t.current ? C.ink : C.sub, fontWeight: t.current ? 800 : 500 }}>{t.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
       {byCat.length === 0 ? (
         <div style={{ ...card, textAlign: "center", padding: "40px 18px", color: C.sub }}>
           <ChartPie size={36} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
@@ -391,11 +455,19 @@ function Stats({ byCat, totalExpense, prevExpense, txs, month, setMonth, onTx })
 }
 
 // ──────── 가계부: 예산 ────────
-function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, onEditRecurring, onDeleteRecurring }) {
+function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, onEditRecurring, onDeleteRecurring, catBudgets, onSaveCatBudget, monthTxs }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(budget));
   const [showAddR, setShowAddR] = useState(false);
+  const [showCatBudget, setShowCatBudget] = useState(false);
+  const [catVals, setCatVals] = useState({});
   const totalFixed = recurring.reduce((s, r) => s + r.amount, 0);
+
+  const catSpent = useMemo(() => {
+    const m = {};
+    (monthTxs || []).filter((t) => t.type === "expense").forEach((t) => { m[t.cat] = (m[t.cat] || 0) + t.amount; });
+    return m;
+  }, [monthTxs]);
   return (
     <div>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>{month}월 예산</div>
@@ -438,6 +510,45 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
           <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 8, paddingTop: 12, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700 }}>
             <span>합계</span><span>{fmt(totalFixed)}</span>
           </div>
+        )}
+      </div>
+      {/* 카테고리별 예산 */}
+      <div style={{ ...card, marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showCatBudget ? 14 : 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>카테고리별 예산</div>
+          <button onClick={() => { setShowCatBudget((v) => !v); setCatVals({ ...catBudgets }); }} style={{ border: "none", background: C.soft, borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{showCatBudget ? "닫기" : "설정"}</button>
+        </div>
+        {!showCatBudget && Object.keys(catBudgets || {}).length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            {EXPENSE_CATS.filter((c) => catBudgets[c]).map((c) => {
+              const bgt = catBudgets[c], sp = catSpent[c] || 0, pct = Math.min(100, Math.round((sp / bgt) * 100));
+              const { color } = CATS[c] || CATS["기타"];
+              return (
+                <div key={c} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                    <span style={{ color }}>{c}</span>
+                    <span style={{ color: sp > bgt ? C.expense : C.sub }}>{fmt(sp)} / {fmt(bgt)}</span>
+                  </div>
+                  <div style={{ height: 6, background: C.soft, borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: pct + "%", height: "100%", borderRadius: 4, background: sp > bgt ? C.expense : color }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {showCatBudget && (
+          <>
+            {EXPENSE_CATS.map((c) => (
+              <div key={c} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{ width: 70, fontSize: 12, fontWeight: 600, color: (CATS[c] || CATS["기타"]).color, flexShrink: 0 }}>{c}</div>
+                <input type="number" placeholder="예산 없음" value={catVals[c] || ""} onChange={(e) => setCatVals((v) => ({ ...v, [c]: e.target.value }))}
+                  style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: font }} />
+              </div>
+            ))}
+            <button onClick={() => { const cleaned = {}; Object.entries(catVals).forEach(([k, v]) => { if (v) cleaned[k] = Number(v); }); onSaveCatBudget(cleaned); setShowCatBudget(false); }}
+              style={{ width: "100%", marginTop: 4, padding: "12px 0", borderRadius: 12, border: "none", background: C.ink, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: font }}>저장</button>
+          </>
         )}
       </div>
       {showAddR && <EditRecurSheet onClose={() => setShowAddR(false)} onSave={(r) => { onAddRecurring(r); setShowAddR(false); }} />}
@@ -603,42 +714,151 @@ function Schedule({ events, month, year, setMonth, onJump, onEdit, onDelete, onA
 }
 
 // ──────── 할일 ────────
-function Todos({ todos, onToggle, onAdd, onDelete }) {
+// ──────── 메모장 ────────
+function Memos({ notes, currentWho, onAdd, onUpdate, onDelete }) {
   const [text, setText] = useState("");
-  const [who, setWho] = useState("같이");
-  const pending = todos.filter((t) => !t.done);
-  const done = todos.filter((t) => t.done);
+  const [editId, setEditId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const inputRef = useRef(null);
+
+  const handleAdd = () => {
+    if (!text.trim()) return;
+    onAdd({ text: text.trim(), who: currentWho });
+    setText("");
+  };
+
+  const startEdit = (n) => { setEditId(n.id); setEditText(n.text); };
+  const saveEdit = () => { if (editText.trim()) onUpdate(editId, { text: editText.trim() }); setEditId(null); };
+
   return (
     <div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>할일</div>
+      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>메모</div>
       <div style={{ ...card, marginBottom: 12 }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          {Object.keys(WHO).map((w) => (
-            <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 10, padding: "8px 4px", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>{w}</button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && text.trim()) { onAdd({ text: text.trim(), who }); setText(""); } }} placeholder="할일 입력..." style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font }} />
-          <button onClick={() => { if (text.trim()) { onAdd({ text: text.trim(), who }); setText(""); } }} style={{ background: C.ink, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}>추가</button>
-        </div>
+        <textarea ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
+          placeholder="메모를 입력하세요..." rows={3}
+          style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, resize: "none", marginBottom: 8 }} />
+        <button onClick={handleAdd} disabled={!text.trim()} style={{ width: "100%", border: "none", borderRadius: 10, padding: "10px 0", background: text.trim() ? C.ink : C.line, color: text.trim() ? "#fff" : C.sub, fontWeight: 800, fontSize: 14, cursor: text.trim() ? "pointer" : "default", fontFamily: font }}>저장</button>
       </div>
-      {pending.length > 0 && (
-        <div style={{ ...card, marginBottom: 12 }}>
-          {pending.map((t) => (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0" }}>
-              <button onClick={() => onToggle(t.id)} style={{ width: 22, height: 22, borderRadius: 8, border: `2px solid ${C.line}`, background: "#fff", cursor: "pointer", flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{t.text}</div>
-              <WhoTag who={t.who} />
-              <button onClick={() => onDelete(t.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#CFD6D1" }}><Trash2 size={15} /></button>
+      {notes.map((n) => (
+        <div key={n.id} style={{ ...card, marginBottom: 10 }}>
+          {editId === n.id ? (
+            <>
+              <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3}
+                style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, resize: "none", marginBottom: 8 }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setEditId(null)} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "8px 0", background: "#fff", color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font }}>취소</button>
+                <button onClick={saveEdit} style={{ flex: 2, border: "none", borderRadius: 10, padding: "8px 0", background: C.ink, color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: font }}>저장</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{n.text}</div>
+                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                  <WhoTag who={n.who} />
+                  {n.createdAt?.seconds && <span style={{ fontSize: 11, color: C.sub }}>{new Date(n.createdAt.seconds * 1000).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</span>}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                <button onClick={() => startEdit(n)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4 }}><Pencil size={14} /></button>
+                <button onClick={() => onDelete(n.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#CFD6D1", padding: 4 }}><Trash2 size={14} /></button>
+              </div>
             </div>
-          ))}
+          )}
+        </div>
+      ))}
+      {notes.length === 0 && (
+        <div style={{ ...card, textAlign: "center", padding: "40px 18px", color: C.sub }}>
+          <StickyNote size={36} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
+          <div style={{ fontSize: 14, fontWeight: 600 }}>공유 메모를 남겨보세요</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const PRIORITY = { 높음: { color: "#EF4444", label: "높음" }, 보통: { color: "#F59E0B", label: "보통" }, 낮음: { color: "#9AA5A0", label: "낮음" } };
+function Todos({ todos, onToggle, onAdd, onDelete }) {
+  const [showForm, setShowForm] = useState(false);
+  const [text, setText] = useState("");
+  const [who, setWho] = useState("같이");
+  const [priority, setPriority] = useState("보통");
+  const [dueDate, setDueDate] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+
+  const reset = () => { setText(""); setWho("같이"); setPriority("보통"); setDueDate(""); setShowForm(false); };
+  const handleAdd = () => {
+    if (!text.trim()) return;
+    onAdd({ text: text.trim(), who, priority, dueDate });
+    reset();
+  };
+
+  const sortedPending = [...todos.filter((t) => !t.done)].sort((a, b) => {
+    const po = { 높음: 0, 보통: 1, 낮음: 2 };
+    if (po[a.priority] !== po[b.priority]) return (po[a.priority] || 1) - (po[b.priority] || 1);
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate) return -1; if (b.dueDate) return 1;
+    return 0;
+  });
+  const done = todos.filter((t) => t.done);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>할일</div>
+        <button onClick={() => setShowForm((v) => !v)} style={{ border: "none", background: C.ink, color: "#fff", borderRadius: 10, padding: "7px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font, display: "flex", alignItems: "center", gap: 5 }}><Plus size={14} />추가</button>
+      </div>
+      {showForm && (
+        <div style={{ ...card, marginBottom: 12 }}>
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} placeholder="할일 입력..." style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, marginBottom: 10 }} />
+          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+            {Object.keys(PRIORITY).map((p) => (
+              <button key={p} onClick={() => setPriority(p)} style={{ flex: 1, border: `1.5px solid ${priority === p ? PRIORITY[p].color : C.line}`, borderRadius: 9, padding: "6px 0", background: priority === p ? PRIORITY[p].color + "14" : "#fff", color: priority === p ? PRIORITY[p].color : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: font }}>{p}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            {Object.keys(WHO).map((w) => (
+              <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 9, padding: "6px 0", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: font }}>{w}</button>
+            ))}
+          </div>
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", fontSize: 13, fontFamily: font, marginBottom: 10, color: dueDate ? C.ink : C.sub }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={reset} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 0", background: "#fff", color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font }}>취소</button>
+            <button onClick={handleAdd} style={{ flex: 2, border: "none", borderRadius: 10, padding: "10px 0", background: C.ink, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: font }}>추가</button>
+          </div>
+        </div>
+      )}
+      {sortedPending.length > 0 && (
+        <div style={{ ...card, marginBottom: 12 }}>
+          {sortedPending.map((t, i) => {
+            const pc = PRIORITY[t.priority]?.color || C.sub;
+            const isOverdue = t.dueDate && t.dueDate < today;
+            const isDueToday = t.dueDate === today;
+            return (
+              <div key={t.id}>
+                {i > 0 && <div style={{ height: 1, background: C.line }} />}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 0" }}>
+                  <button onClick={() => onToggle(t.id)} style={{ width: 22, height: 22, borderRadius: 8, border: `2px solid ${pc}`, background: "#fff", cursor: "pointer", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{t.text}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                      {t.priority && <span style={{ fontSize: 10, fontWeight: 700, color: pc, background: pc + "14", padding: "1px 6px", borderRadius: 6 }}>{t.priority}</span>}
+                      {t.dueDate && <span style={{ fontSize: 11, fontWeight: 600, color: isOverdue ? C.expense : isDueToday ? "#F59E0B" : C.sub }}>{isOverdue ? "⚠️ " : isDueToday ? "오늘 · " : ""}{t.dueDate.slice(5).replace("-", "/")}</span>}
+                      <WhoTag who={t.who} />
+                    </div>
+                  </div>
+                  <button onClick={() => onDelete(t.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#CFD6D1" }}><Trash2 size={15} /></button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       {done.length > 0 && (
         <div style={{ ...card, opacity: 0.6 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 8 }}>완료 {done.length}개</div>
           {done.map((t) => (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
               <button onClick={() => onToggle(t.id)} style={{ width: 22, height: 22, borderRadius: 8, border: "none", background: C.income, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Check size={13} color="#fff" /></button>
               <div style={{ flex: 1, fontSize: 13, textDecoration: "line-through", color: C.sub }}>{t.text}</div>
               <button onClick={() => onDelete(t.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#CFD6D1" }}><Trash2 size={14} /></button>
@@ -646,7 +866,7 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
           ))}
         </div>
       )}
-      {todos.length === 0 && (
+      {todos.length === 0 && !showForm && (
         <div style={{ ...card, textAlign: "center", padding: "40px 18px", color: C.sub }}>
           <ListChecks size={36} style={{ margin: "0 auto 12px", display: "block", opacity: 0.3 }} />
           <div style={{ fontSize: 14, fontWeight: 600 }}>할일이 없어요 👍</div>
@@ -947,7 +1167,9 @@ export default function App() {
   const [todos, setTodos] = useState([]);
   const [recurring, setRecurring] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [budget, setBudgetState] = useState(2000000);
+  const [catBudgets, setCatBudgets] = useState({});
 
   // UI 상태
   const [mode, setMode] = useState("money");
@@ -956,6 +1178,7 @@ export default function App() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonthRaw] = useState(now.getMonth() + 1);
   const [showAdd, setShowAdd] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [addDay, setAddDay] = useState(null); // 일정 추가 시 기본 날짜
   const [editTx, setEditTx] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
@@ -1004,8 +1227,14 @@ export default function App() {
       onSnapshot(collection(db, "assets"), (snap) => {
         setAssets(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }),
+      onSnapshot(query(collection(db, "notes"), orderBy("createdAt", "desc")), (snap) => {
+        setNotes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }),
       onSnapshot(doc(db, "settings", "budget"), (snap) => {
         if (snap.exists()) setBudgetState(snap.data().amount || 2000000);
+      }),
+      onSnapshot(doc(db, "settings", "catBudget"), (snap) => {
+        if (snap.exists()) setCatBudgets(snap.data() || {});
       }),
     ];
     return () => unsubs.forEach((u) => u());
@@ -1059,20 +1288,63 @@ export default function App() {
     await deleteDoc(doc(db, "assets", id));
   }, []);
 
+  const addNote = useCallback(async (n) => {
+    await addDoc(collection(db, "notes"), { ...n, createdAt: serverTimestamp() });
+  }, []);
+  const updateNote = useCallback(async (id, n) => {
+    await updateDoc(doc(db, "notes", id), n);
+  }, []);
+  const deleteNote = useCallback(async (id) => {
+    await deleteDoc(doc(db, "notes", id));
+  }, []);
+
   const saveBudget = useCallback(async (amount) => {
     await setDoc(doc(db, "settings", "budget"), { amount });
     setBudgetState(amount);
   }, []);
+  const saveCatBudget = useCallback(async (cats) => {
+    await setDoc(doc(db, "settings", "catBudget"), cats);
+    setCatBudgets(cats);
+  }, []);
+
+  const exportExcel = useCallback(() => {
+    const rows = monthTxs
+      .filter((t) => !t._instDerived)
+      .map((t) => ({
+        날짜: `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day || 1).padStart(2, "0")}`,
+        구분: t.type === "income" ? "수입" : "지출",
+        카테고리: t.cat || "",
+        내용: t.memo || "",
+        금액: t.amount || 0,
+        담당: t.who || "",
+        고정: t.fixed ? "O" : "",
+        할부: t.installment ? `${t.installmentCurrent}/${t.installmentTotal}` : "",
+      }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 6 }, { wch: 4 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `${year}년${month}월`);
+    XLSX.writeFile(wb, `우리집_가계부_${year}년${month}월.xlsx`);
+  }, [monthTxs, month, year]);
 
   // ── 파생 데이터 ──
   const fixedFor = (m, y) => recurring.map((r) => ({
     id: "r" + r.id + "-" + y + "-" + m, rid: r.id, type: "expense", cat: r.cat || "기타",
     amount: r.amount, memo: r.name, who: r.who, day: r.day, month: m, year: y, fixed: true,
   }));
-  const monthTxs = useMemo(
-    () => [...txs.filter((t) => t.month === month && t.year === year), ...fixedFor(month, year)],
-    [txs, recurring, month, year]
-  );
+  const monthTxs = useMemo(() => {
+    const real = txs.filter((t) => t.month === month && t.year === year);
+    // 할부 자동 회차 증가: 다른 달에 등록된 할부가 현재 달에도 표시
+    const installmentOther = txs
+      .filter((t) => !(t.month === month && t.year === year) && t.installment && t.installmentTotal)
+      .map((t) => {
+        const diff = (year - t.year) * 12 + (month - t.month);
+        const eff = (t.installmentCurrent || 1) + diff;
+        return diff > 0 && eff <= t.installmentTotal ? { ...t, installmentCurrent: eff, month, year, _instDerived: true } : null;
+      })
+      .filter(Boolean);
+    return [...real, ...installmentOther, ...fixedFor(month, year)];
+  }, [txs, recurring, month, year]);
   const prevExpense = useMemo(() => {
     const pm = month === 1 ? 12 : month - 1;
     const py = month === 1 ? year - 1 : year;
@@ -1106,7 +1378,7 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} who={loginWho} />;
   }
 
-  const modes = [["money", "가계부", Coins], ["schedule", "일정", CalendarHeart], ["todo", "할일", ListChecks]];
+  const modes = [["money", "가계부", Coins], ["schedule", "일정", CalendarHeart], ["todo", "할일", ListChecks], ["memo", "메모", StickyNote]];
   const tabs = [["home", "홈", HomeIcon], ["cal", "달력", CalendarDays], ["stats", "통계", ChartPie], ["budget", "예산", Target], ["asset", "자산", Wallet]];
 
   return (
@@ -1123,11 +1395,15 @@ export default function App() {
             );
           })}
         </div>
-        <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 16, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>
-            {currentWho === "종현" ? "J" : "S"}
-          </div>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {mode === "money" && <button onClick={() => setShowSearch(true)} style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Search size={19} /></button>}
+          {mode === "money" && <button onClick={exportExcel} title="엑셀 내보내기" style={{ border: "none", background: "none", cursor: "pointer", color: C.sub, padding: 4, display: "flex" }}><Download size={19} /></button>}
+          <button onClick={() => signOut(auth)} title="로그아웃" style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+            <div style={{ width: 32, height: 32, borderRadius: 16, background: WHO[currentWho], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff" }}>
+              {currentWho === "종현" ? "J" : "S"}
+            </div>
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: "10px 18px", paddingBottom: mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120 }}>
@@ -1135,13 +1411,14 @@ export default function App() {
           <>
             {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
-            {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} month={month} setMonth={setMonth} onTx={openTx} />}
-            {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} />}
+            {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
+            {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
             {tab === "asset" && <Assets assets={assets} onAdd={addAsset} onDelete={deleteAsset} />}
           </>
         )}
         {mode === "schedule" && <Schedule events={events} month={month} year={year} setMonth={setMonth} onJump={jumpTo} onEdit={setEditEvent} onDelete={deleteEvent} onAdd={(d) => { setAddDay(d); setShowAdd(true); }} />}
         {mode === "todo" && <Todos todos={todos} onToggle={(id) => { const t = todos.find((x) => x.id === id); if (t) toggleTodo(id, t.done); }} onAdd={addTodo} onDelete={deleteTodo} />}
+        {mode === "memo" && <Memos notes={notes} currentWho={currentWho} onAdd={addNote} onUpdate={updateNote} onDelete={deleteNote} />}
       </div>
 
       {mode === "money" && (tab === "home" || tab === "cal") && (
@@ -1190,6 +1467,7 @@ export default function App() {
           onSave={(r) => { updateRecurring(editRecur.id, r); setEditRecur(null); }}
           onDelete={() => { deleteRecurring(editRecur.id); setEditRecur(null); }} />
       )}
+      {showSearch && <TxSearch txs={txs} onClose={() => setShowSearch(false)} onTx={openTx} />}
     </div>
   );
 }
