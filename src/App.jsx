@@ -23,17 +23,17 @@ const C = {
 };
 const WHO = { 종현: "#3568C9", 성은: "#E5559A", 같이: "#16A06A" };
 const CATS = {
-  외식:         { color: "#C85010", bg: "#FFE0C0", Icon: Utensils },         // 오렌지
-  "의류/미용":  { color: "#C01880", bg: "#F9C8EC", Icon: Shirt },            // 핫핑크
-  "의료/건강":  { color: "#0A8050", bg: "#B8EDD8", Icon: Stethoscope },      // 민트그린
-  교통:         { color: "#1860B8", bg: "#C0D8F8", Icon: Car },               // 하늘
+  외식:          { color: "#C85010", bg: "#FFE0C0", Icon: Utensils },        // 오렌지
+  생필품:        { color: "#4830B0", bg: "#D4C8F8", Icon: ShoppingBasket },  // 라벤더
+  육아:          { color: "#985800", bg: "#FFD89A", Icon: Baby },            // 피치골드
+  교통:          { color: "#1860B8", bg: "#C0D8F8", Icon: Car },             // 하늘
+  "의료/건강":   { color: "#0A8050", bg: "#B8EDD8", Icon: Stethoscope },     // 민트그린
+  "의류/미용":   { color: "#C01880", bg: "#F9C8EC", Icon: Shirt },           // 핫핑크
+  "여행/문화":   { color: "#087878", bg: "#B0E8E4", Icon: Plane },           // 틸
+  교육:          { color: "#0848A8", bg: "#B8CCF4", Icon: BookOpen },        // 블루
+  경조사:        { color: "#B81030", bg: "#F9C0CC", Icon: Gift },            // 로즈레드
   "주거/공과금": { color: "#3838B0", bg: "#C8C8F4", Icon: Building2 },       // 인디고
-  생필품:     { color: "#4830B0", bg: "#D4C8F8", Icon: ShoppingBasket },      // 라벤더
-  "여행/문화": { color: "#087878", bg: "#B0E8E4", Icon: Plane },              // 틸
-  교육:       { color: "#0848A8", bg: "#B8CCF4", Icon: BookOpen },           // 블루
-  육아:       { color: "#985800", bg: "#FFD89A", Icon: Baby },               // 피치골드
-  경조사:     { color: "#B81030", bg: "#F9C0CC", Icon: Gift },               // 로즈레드
-  기타:       { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },     // 세이지그레이
+  기타:          { color: "#486058", bg: "#C8D4D0", Icon: MoreHorizontal },  // 세이지그레이
   급여:       { color: "#0A8050", bg: "#B8EDD8", Icon: Banknote },           // 민트그린
   부수입:     { color: "#0848A8", bg: "#B8CCF4", Icon: TrendingUp },         // 블루
   기타수입:   { color: "#7C6840", bg: "#EDE3C8", Icon: MoreHorizontal },     // 황토
@@ -46,7 +46,7 @@ function getCatInfo(name) {
   const hue = ((Math.abs(h) % 36) * 10 + 10) % 360;
   return { color: `hsl(${hue},60%,40%)`, bg: `hsl(${hue},55%,88%)`, Icon: MoreHorizontal };
 }
-const EXPENSE_CATS = ["외식", "의류/미용", "의료/건강", "교통", "주거/공과금", "생필품", "여행/문화", "교육", "육아", "경조사", "기타"];
+const EXPENSE_CATS = ["외식", "생필품", "육아", "교통", "의료/건강", "의류/미용", "여행/문화", "교육", "경조사", "주거/공과금", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
 
 // ──────── 이용내역서 파서 ────────
