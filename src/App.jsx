@@ -23,26 +23,26 @@ const C = {
 };
 const WHO = { 종현: "#3568C9", 성은: "#E5559A", 같이: "#16A06A" };
 const CATS = {
-  식비: { color: "#F25C44", Icon: UtensilsCrossed },
-  외식: { color: "#FF8C42", Icon: Utensils },
-  "카페/간식": { color: "#E5559A", Icon: Coffee },
-  "술/유흥": { color: "#A855F7", Icon: Wine },
-  "의류/미용": { color: "#EC4899", Icon: Shirt },
-  "의료/건강": { color: "#16A06A", Icon: Stethoscope },
-  교통: { color: "#3E9BD6", Icon: Car },
-  주거: { color: "#6366F1", Icon: Building2 },
-  통신: { color: "#0EA5E9", Icon: Wifi },
-  공과금: { color: "#F59E0B", Icon: Zap },
-  생활용품: { color: "#8B7CF0", Icon: ShoppingBasket },
-  "문화/여가": { color: "#6C5CE7", Icon: Clapperboard },
-  여행: { color: "#14B8A6", Icon: Plane },
-  교육: { color: "#3568C9", Icon: BookOpen },
-  육아: { color: "#F2A33C", Icon: Baby },
-  경조사: { color: "#F43F5E", Icon: Gift },
-  기타: { color: "#9AA5A0", Icon: MoreHorizontal },
-  급여: { color: "#16A06A", Icon: Banknote },
-  부수입: { color: "#3568C9", Icon: TrendingUp },
-  기타수입: { color: "#9AA5A0", Icon: MoreHorizontal },
+  식비:       { color: "#E05540", bg: "#FDE8E5", Icon: UtensilsCrossed },
+  외식:       { color: "#D47030", bg: "#FEEEE4", Icon: Utensils },
+  "카페/간식": { color: "#C84490", bg: "#FCE8F3", Icon: Coffee },
+  "술/유흥":  { color: "#9048E0", bg: "#F0E8FD", Icon: Wine },
+  "의류/미용": { color: "#D43C92", bg: "#FCE8F2", Icon: Shirt },
+  "의료/건강": { color: "#149068", bg: "#E5F5EE", Icon: Stethoscope },
+  교통:       { color: "#2880D4", bg: "#E5F0FB", Icon: Car },
+  주거:       { color: "#4C52D8", bg: "#EDEDFD", Icon: Building2 },
+  통신:       { color: "#0888D4", bg: "#E5F3FC", Icon: Wifi },
+  공과금:     { color: "#C07C08", bg: "#FEF3E3", Icon: Zap },
+  생활용품:   { color: "#6C58D0", bg: "#EDE9FB", Icon: ShoppingBasket },
+  "문화/여가": { color: "#5448D4", bg: "#EDEDFB", Icon: Clapperboard },
+  여행:       { color: "#109890", bg: "#E4F6F5", Icon: Plane },
+  교육:       { color: "#2858C8", bg: "#E8EEFA", Icon: BookOpen },
+  육아:       { color: "#C88010", bg: "#FEF3E3", Icon: Baby },
+  경조사:     { color: "#C83048", bg: "#FCE8EC", Icon: Gift },
+  기타:       { color: "#7A8880", bg: "#EEF0EF", Icon: MoreHorizontal },
+  급여:       { color: "#149068", bg: "#E5F5EE", Icon: Banknote },
+  부수입:     { color: "#2858C8", bg: "#E8EEFA", Icon: TrendingUp },
+  기타수입:   { color: "#7A8880", bg: "#EEF0EF", Icon: MoreHorizontal },
 };
 const EXPENSE_CATS = ["식비", "외식", "카페/간식", "술/유흥", "의류/미용", "의료/건강", "교통", "주거", "통신", "공과금", "생활용품", "문화/여가", "여행", "교육", "육아", "경조사", "기타"];
 const INCOME_CATS = ["급여", "부수입", "기타수입"];
@@ -73,9 +73,9 @@ function WhoTag({ who }) {
   return <span style={{ fontSize: 11, fontWeight: 700, color: WHO[who] || C.sub, background: (WHO[who] || C.sub) + "14", padding: "2px 8px", borderRadius: 8 }}>{who}</span>;
 }
 function CatBadge({ cat, size = 38 }) {
-  const { color, Icon } = CATS[cat] || CATS["기타"];
+  const { color, bg, Icon } = CATS[cat] || CATS["기타"];
   return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, background: color + "1A", color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
       <Icon size={size * 0.5} strokeWidth={2.2} />
     </div>
   );
@@ -162,7 +162,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail }) {
   const accentColor = type === "expense" ? C.moneyOut : C.moneyIn;
 
   return (
-    <div style={{ position: "fixed", bottom: 64, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "8px 12px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
+    <div style={{ position: "fixed", bottom: "calc(max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px)))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "8px 12px 10px", zIndex: 22, boxShadow: "0 -2px 12px rgba(16,29,23,0.06)" }}>
       {/* 카테고리 + 상세입력 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", flex: 1, WebkitOverflowScrolling: "touch" }}>
@@ -360,6 +360,7 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx }) {
 function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx }) {
   const [openCat, setOpenCat] = useState(null);
   const COLORS = byCat.map((x) => (CATS[x.name] || CATS["기타"]).color);
+  const PASTEL_COLORS = byCat.map((x) => (CATS[x.name] || CATS["기타"]).bg);
   const diff = prevExpense != null ? totalExpense - prevExpense : null;
 
   // 최근 6개월 추이
@@ -416,7 +417,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={byCat} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2} dataKey="value">
-                  {byCat.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                  {byCat.map((_, i) => <Cell key={i} fill={PASTEL_COLORS[i]} stroke={COLORS[i]} strokeWidth={1.5} />)}
                 </Pie>
                 <Tooltip formatter={(v) => fmt(v)} />
               </PieChart>
@@ -424,14 +425,14 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
           </div>
           <div style={card}>
             {byCat.map((item) => {
-              const { color } = CATS[item.name] || CATS["기타"];
+              const { color, bg } = CATS[item.name] || CATS["기타"];
               const pct = Math.round((item.value / totalExpense) * 100);
               const isOpen = openCat === item.name;
               const catTxs = txs.filter((t) => t.cat === item.name && t.type === "expense");
               return (
                 <div key={item.name}>
                   <div onClick={() => setOpenCat(isOpen ? null : item.name)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer" }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 5, background: color, flexShrink: 0 }} />
+                    <div style={{ width: 12, height: 12, borderRadius: 6, background: bg, border: `2px solid ${color}`, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{item.name}</div>
                     <div style={{ fontSize: 13, color: C.sub }}>{pct}%</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{fmt(item.value)}</div>
@@ -542,7 +543,7 @@ function Budget({ budget, setBudget, spent, month, recurring, onAddRecurring, on
               <div key={c} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <div style={{ width: 70, fontSize: 12, fontWeight: 600, color: (CATS[c] || CATS["기타"]).color, flexShrink: 0 }}>{c}</div>
                 <input type="number" placeholder="예산 없음" value={catVals[c] || ""} onChange={(e) => setCatVals((v) => ({ ...v, [c]: e.target.value }))}
-                  style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: font }} />
+                  style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 8, padding: "7px 10px", fontSize: 16, fontFamily: font }} />
               </div>
             ))}
             <button onClick={() => { const cleaned = {}; Object.entries(catVals).forEach(([k, v]) => { if (v) cleaned[k] = Number(v); }); onSaveCatBudget(cleaned); setShowCatBudget(false); }}
@@ -610,7 +611,7 @@ function AddAssetSheet({ onClose, onSave }) {
   const [kind, setKind] = useState("예금");
   const [amount, setAmount] = useState("");
   const [monthly, setMonthly] = useState("");
-  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff" };
+  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
   return (
     <Sheet onClose={onClose} title="자산 추가">
       <div style={{ marginBottom: 12 }}>
@@ -809,7 +810,7 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
       </div>
       {showForm && (
         <div style={{ ...card, marginBottom: 12 }}>
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} placeholder="할일 입력..." style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, marginBottom: 10 }} />
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} placeholder="할일 입력..." style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, marginBottom: 10 }} />
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
             {Object.keys(PRIORITY).map((p) => (
               <button key={p} onClick={() => setPriority(p)} style={{ flex: 1, border: `1.5px solid ${priority === p ? PRIORITY[p].color : C.line}`, borderRadius: 9, padding: "6px 0", background: priority === p ? PRIORITY[p].color + "14" : "#fff", color: priority === p ? PRIORITY[p].color : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: font }}>{p}</button>
@@ -820,7 +821,7 @@ function Todos({ todos, onToggle, onAdd, onDelete }) {
               <button key={w} onClick={() => setWho(w)} style={{ flex: 1, border: `1.5px solid ${who === w ? WHO[w] : C.line}`, borderRadius: 9, padding: "6px 0", background: who === w ? WHO[w] + "14" : "#fff", color: who === w ? WHO[w] : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: font }}>{w}</button>
             ))}
           </div>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", fontSize: 13, fontFamily: font, marginBottom: 10, color: dueDate ? C.ink : C.sub }} />
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ width: "100%", border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", fontSize: 16, fontFamily: font, marginBottom: 10, color: dueDate ? C.ink : C.sub }} />
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={reset} style={{ flex: 1, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 0", background: "#fff", color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font }}>취소</button>
             <button onClick={handleAdd} style={{ flex: 2, border: "none", borderRadius: 10, padding: "10px 0", background: C.ink, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: font }}>추가</button>
@@ -902,7 +903,7 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
     if (makeFixed && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day, cat, who }); }
     else { onSave(t); }
   };
-  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff" };
+  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
   return (
     <Sheet onClose={onClose} title={isEdit ? "내역 수정" : "내역 추가"}>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -961,11 +962,11 @@ function AddTxSheet({ month, year, initial, defaultWho = "같이", onClose, onSa
               <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#7C3AED", marginBottom: 5 }}>총 개월수</div>
-                  <input type="number" value={instTotal} onChange={(e) => setInstTotal(Math.max(1, Number(e.target.value)))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
+                  <input type="number" value={instTotal} onChange={(e) => setInstTotal(Math.max(1, Number(e.target.value)))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#7C3AED", marginBottom: 5 }}>현재 회차</div>
-                  <input type="number" value={instCurrent} onChange={(e) => setInstCurrent(Math.min(instTotal, Math.max(1, Number(e.target.value))))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
+                  <input type="number" value={instCurrent} onChange={(e) => setInstCurrent(Math.min(instTotal, Math.max(1, Number(e.target.value))))} style={{ border: "1px solid #DDD6FE", borderRadius: 8, padding: "8px 10px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff", textAlign: "center", fontWeight: 700 }} />
                 </div>
               </div>
               {instRemaining !== null && (
@@ -995,7 +996,7 @@ function AddEventSheet({ month, year, initial, defaultDay, onClose, onSave, onDe
   const [time, setTime] = useState(initial?.time || "");
   const [place, setPlace] = useState(initial?.place || "");
   const [who, setWho] = useState(initial?.who || "같이");
-  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff" };
+  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
   return (
     <Sheet onClose={onClose} title={isEdit ? "일정 수정" : "일정 추가"}>
       <div style={{ marginBottom: 12 }}>
@@ -1041,7 +1042,7 @@ function EditRecurSheet({ initial, onClose, onSave, onDelete }) {
   const [day, setDay] = useState(initial?.day || 1);
   const [cat, setCat] = useState(initial?.cat || "기타");
   const [who, setWho] = useState(initial?.who || "같이");
-  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: font, width: "100%", background: "#fff" };
+  const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
   return (
     <Sheet onClose={onClose} title={initial ? "고정지출 수정" : "고정지출 추가"}>
       <div style={{ marginBottom: 12 }}>
@@ -1406,7 +1407,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ padding: "10px 18px", paddingBottom: mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120 }}>
+      <div style={{ padding: "10px 18px", paddingBottom: `calc(${mode === "money" && (tab === "home" || tab === "cal") ? 170 : 120}px + env(safe-area-inset-bottom, 0px))` }}>
         {mode === "money" && (
           <>
             {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
@@ -1426,15 +1427,15 @@ export default function App() {
       )}
 
       {mode === "schedule" && (
-        <button onClick={() => { setAddDay(null); setShowAdd(true); }} aria-label="일정 추가" style={{ position: "fixed", bottom: 30, right: "max(18px, calc(50% - 222px))", width: 54, height: 54, borderRadius: 27, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20 }}>
+        <button onClick={() => { setAddDay(null); setShowAdd(true); }} aria-label="일정 추가" style={{ position: "fixed", bottom: "calc(30px + env(safe-area-inset-bottom, 0px))", right: "max(18px, calc(50% - 222px))", width: 56, height: 56, minWidth: 44, minHeight: 44, borderRadius: 28, border: "none", background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(16,29,23,0.28)", cursor: "pointer", zIndex: 20, touchAction: "manipulation" }}>
           <Plus size={26} />
         </button>
       )}
 
       {mode === "money" && (
-        <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", padding: "8px 0 20px", zIndex: 25 }}>
+        <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.line}`, display: "flex", paddingTop: 8, paddingBottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))", zIndex: 25 }}>
           {tabs.map(([k, label, Icon]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: 4 }}>
+            <button key={k} onClick={() => setTab(k)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", color: tab === k ? C.ink : "#B3BBB6", fontFamily: font, padding: "4px 0", minHeight: 44, touchAction: "manipulation" }}>
               <Icon size={22} strokeWidth={tab === k ? 2.4 : 1.8} style={{ display: "block", margin: "0 auto" }} />
               <div style={{ fontSize: 10.5, fontWeight: tab === k ? 700 : 500, marginTop: 3 }}>{label}</div>
             </button>
