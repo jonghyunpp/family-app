@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import * as XLSX from "xlsx";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Home as HomeIcon, CalendarDays, PieChart as ChartPie, Target, Wallet, Plus,
@@ -1307,7 +1306,8 @@ export default function App() {
     setCatBudgets(cats);
   }, []);
 
-  const exportExcel = useCallback(() => {
+  const exportExcel = useCallback(async () => {
+    const XLSX = await import("xlsx");
     const rows = monthTxs
       .filter((t) => !t._instDerived)
       .map((t) => ({
