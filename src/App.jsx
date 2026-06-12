@@ -335,7 +335,7 @@ function MonthGrid({ month, year, selected, onSelect, renderDay }) {
   );
 }
 // ──────── 빠른 입력 바 ────────
-function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
+function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date, darkMode = false }) {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("외식");
   const inputRef = useRef(null);
@@ -362,7 +362,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
   const accentColor = inferredType === "expense" ? C.moneyOut : C.moneyIn;
 
   return (
-    <div style={{ position: "fixed", bottom: "calc(max(72px, calc(env(safe-area-inset-bottom, 0px) + 64px)))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 456, background: C.card, borderRadius: 20, padding: "10px 14px 12px", zIndex: 22, boxShadow: "0 4px 24px rgba(16,29,23,0.14), 0 1px 4px rgba(16,29,23,0.06)" }}>
+    <div style={{ position: "fixed", bottom: "calc(max(84px, calc(env(safe-area-inset-bottom, 0px) + 76px)))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 456, background: darkMode ? "#1A2E28" : "#EEF4F0", borderRadius: 20, padding: "10px 14px 12px", zIndex: 22, boxShadow: "0 4px 24px rgba(16,29,23,0.14), 0 1px 4px rgba(16,29,23,0.06)" }}>
       {/* 날짜 표시 (달력 탭에서 날짜 선택 시) */}
       {date && (() => { const [dy, dm, dd] = date.split("-").map(Number); return (
         <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, marginBottom: 5 }}>{dm}월 {dd}일 입력 중</div>
@@ -374,7 +374,7 @@ function QuickAddBar({ who: defaultWho = "종현", onSave, onDetail, date }) {
             const { color, bg } = CATS[c];
             const sel = cat === c;
             return (
-              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 20, padding: "5px 11px", background: sel ? bg : C.soft, color: sel ? color : C.sub, fontSize: 12, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" }}>
+              <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, border: `1.5px solid ${sel ? color : "transparent"}`, borderRadius: 20, padding: "5px 11px", background: sel ? bg : darkMode ? "#243830" : "#D8E8DC", color: sel ? color : C.sub, fontSize: 12, fontWeight: sel ? 800 : 600, cursor: "pointer", fontFamily: font, whiteSpace: "nowrap" }}>
                 {c}
               </button>
             );
@@ -1234,8 +1234,7 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
     if (initialDate) return initialDate;
     return `${year}-${String(month).padStart(2,"0")}-${String(new Date().getDate()).padStart(2,"0")}`;
   });
-  const [fixed, setFixed] = useState(initial?.fixed || false);
-  const [makeFixed, setMakeFixed] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [isInstallment, setIsInstallment] = useState(initial?.installment || false);
   const [instTotal, setInstTotal] = useState(initial?.installmentTotal || 1);
   const [instCurrent, setInstCurrent] = useState(initial?.installmentCurrent || 1);
@@ -1249,9 +1248,9 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
   const save = () => {
     if (!amount) return;
     const [txYear, txMonth, txDay] = dateStr ? dateStr.split("-").map(Number) : [year, month, 1];
-    const t = { type, cat, amount: Number(amount), memo, who, day: txDay, month: txMonth, year: txYear, fixed };
-    if (isInstallment) { Object.assign(t, { installment: true, installmentTotal: instTotal, installmentCurrent: instCurrent, fixed: false }); }
-    if (makeFixed && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day: txDay, cat, who }); }
+    const t = { type, cat, amount: Number(amount), memo, who, day: txDay, month: txMonth, year: txYear, fixed: false };
+    if (isInstallment) { Object.assign(t, { installment: true, installmentTotal: instTotal, installmentCurrent: instCurrent }); }
+    if (isRecurring && onSaveRecurring && !isInstallment) { onSaveRecurring({ name: memo || cat, amount: Number(amount), day: txDay, cat, who }); }
     else { onSave(t); }
   };
   const input = { border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 16, fontFamily: font, width: "100%", background: "#fff" };
@@ -1297,14 +1296,10 @@ function AddTxSheet({ month, year, initial, initialDate, defaultWho = "같이", 
           {Object.keys(WHO).map((w) => <option key={w}>{w}</option>)}
         </select>
       </div>
-      {type === "expense" && (
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
-          <input type="checkbox" checked={fixed} onChange={(e) => setFixed(e.target.checked)} />고정 지출
-        </label>
-      )}
-      {!isEdit && type === "expense" && onSaveRecurring && !fixed && (
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
-          <input type="checkbox" checked={makeFixed} onChange={(e) => setMakeFixed(e.target.checked)} />매월 고정지출로 등록
+      {type === "expense" && !isInstallment && onSaveRecurring && (
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
+          <span>고정 지출 <span style={{ fontSize: 11, fontWeight: 500, color: C.sub }}>(매월 자동 반영)</span></span>
         </label>
       )}
       {type === "expense" && (
@@ -1918,7 +1913,7 @@ export default function App() {
 
       {mode === "money" && (tab === "home" || tab === "cal") && (
         <QuickAddBar who={currentWho} onSave={(t) => addTx(t)} onDetail={(d) => { setAddTxDate(d || null); setShowAdd(true); }}
-          date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null} />
+          date={tab === "cal" && calSel ? `${year}-${String(month).padStart(2,"0")}-${String(calSel).padStart(2,"0")}` : null} darkMode={darkMode} />
       )}
 
       {mode === "schedule" && (
@@ -1952,6 +1947,7 @@ export default function App() {
       {editTx && (
         <AddTxSheet month={editTx.month} year={editTx.year} initial={editTx} onClose={() => setEditTx(null)}
           onSave={(t) => { updateTx(editTx.id, t); setEditTx(null); }}
+          onSaveRecurring={(r) => { addRecurring(r); updateTx(editTx.id, { fixed: true }); setEditTx(null); }}
           onDelete={() => { deleteTx(editTx.id); setEditTx(null); }} />
       )}
       {editEvent && (
