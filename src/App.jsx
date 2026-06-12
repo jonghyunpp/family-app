@@ -6,7 +6,7 @@ import {
   MoreHorizontal, Banknote, TrendingUp, Landmark,
   PiggyBank, LineChart, ChevronLeft, ChevronRight, ChevronDown, Pencil,
   Coins, CalendarHeart, ListChecks, Clock, MapPin, Check, Trash2, LogOut,
-  CreditCard, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload, Repeat2, X,
+  CreditCard, Shirt, Building2, Plane, BookOpen, Gift, Search, StickyNote, Download, Upload, X,
 } from "lucide-react";
 import {
   collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc,
@@ -269,9 +269,8 @@ function instInfo(t) {
   const endStr = `${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
   return { current: t.installmentCurrent, total: t.installmentTotal, remaining, endStr };
 }
-function TxRow({ t, showDate, onClick, onPin }) {
+function TxRow({ t, showDate, onClick }) {
   const inst = instInfo(t);
-  const pinned = !!t.rid; // recurring에서 생성된 고정 항목
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0" }}>
       <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, cursor: onClick ? "pointer" : "default" }}>
@@ -280,7 +279,7 @@ function TxRow({ t, showDate, onClick, onPin }) {
           <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.memo || t.cat}</div>
           <div style={{ fontSize: 12, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <span>{showDate ? `${t.month}/${t.day} · ` : ""}{t.cat}</span>
-            {t.fixed && <span style={{ fontSize: 10, fontWeight: 700, color: C.sub, background: C.soft, padding: "2px 7px", borderRadius: 7 }}>고정</span>}
+            {t.rid && <span style={{ fontSize: 10, fontWeight: 700, color: C.sub, background: C.soft, padding: "2px 7px", borderRadius: 7 }}>고정</span>}
             {inst && (
               <span style={{ fontSize: 10, fontWeight: 700, color: "#7C3AED", background: "#EDE9FE", padding: "2px 7px", borderRadius: 7, display: "flex", alignItems: "center", gap: 3 }}>
                 <CreditCard size={9} strokeWidth={2.5} />{inst.current}/{inst.total} · 잔여 {inst.remaining}회 · {inst.endStr} 종료
@@ -292,15 +291,6 @@ function TxRow({ t, showDate, onClick, onPin }) {
         <div style={{ fontSize: 14, fontWeight: 700, color: t.type === "income" ? C.moneyIn : C.moneyOut, flexShrink: 0 }}>{fmt(t.amount)}</div>
         {onClick && <ChevronRight size={15} color="#C6CEC9" style={{ flexShrink: 0, marginLeft: -4 }} />}
       </div>
-      {onPin && t.type === "expense" && !t.installment && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onPin(t); }}
-          title={pinned ? "고정 지출 해제" : "고정 지출로 등록"}
-          style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: pinned ? C.income : C.line }}
-        >
-          <Repeat2 size={15} strokeWidth={pinned ? 2.5 : 1.8} />
-        </button>
-      )}
     </div>
   );
 }
@@ -503,7 +493,7 @@ function DatePicker({ value, onChange }) {
 }
 
 // ──────── 가계부: 홈 ────────
-function Home({ totals, budget, txs, month, year, setMonth, onTx, onPin, appTitle = "우리집" }) {
+function Home({ totals, budget, txs, month, year, setMonth, onTx, appTitle = "우리집" }) {
   const remain = budget - totals.expense;
   const pct = Math.min(100, Math.round((totals.expense / budget) * 100));
   const recent = [...txs].sort((a, b) => b.day - a.day).slice(0, 5);
@@ -543,7 +533,7 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx, onPin, appTitl
           {recent.map((t, i) => (
             <div key={t.id}>
               {i > 0 && <div style={{ height: 1, background: C.line }} />}
-              <TxRow t={t} showDate onClick={() => onTx(t)} onPin={onPin} />
+              <TxRow t={t} showDate onClick={() => onTx(t)} />
             </div>
           ))}
         </div>
@@ -560,7 +550,7 @@ function Home({ totals, budget, txs, month, year, setMonth, onTx, onPin, appTitl
 }
 
 // ──────── 가계부: 달력 ────────
-function MoneyCalendar({ txs, month, year, setMonth, onTx, onPin, sel, onSel, onDetail }) {
+function MoneyCalendar({ txs, month, year, setMonth, onTx, sel, onSel, onDetail }) {
   const nowD = new Date();
   const isCurrentMonth = nowD.getMonth() + 1 === month && nowD.getFullYear() === year;
   // 달이 바뀔 때만 선택 날짜 초기화 (탭 이동 시에는 유지)
@@ -607,7 +597,7 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx, onPin, sel, onSel, on
           </div>
           {dayTxs.length > 0 ? (
             dayTxs.map((t, i) => (
-              <div key={t.id}>{i > 0 && <div style={{ height: 1, background: C.line }} />}<TxRow t={t} onClick={() => onTx(t)} onPin={onPin} /></div>
+              <div key={t.id}>{i > 0 && <div style={{ height: 1, background: C.line }} />}<TxRow t={t} onClick={() => onTx(t)} /></div>
             ))
           ) : (
             <div style={{ textAlign: "center", padding: "20px 0", color: C.sub, fontSize: 13 }}>내역이 없어요</div>
@@ -619,7 +609,7 @@ function MoneyCalendar({ txs, month, year, setMonth, onTx, onPin, sel, onSel, on
 }
 
 // ──────── 가계부: 통계 ────────
-function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx, onPin }) {
+function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, setMonth, onTx }) {
   const [openCat, setOpenCat] = useState(null);
   const COLORS = byCat.map((x) => getCatInfo(x.name).color);
   const diff = prevExpense != null ? totalExpense - prevExpense : null;
@@ -736,7 +726,7 @@ function Stats({ byCat, totalExpense, prevExpense, txs, allTxs, month, year, set
                   </div>
                   {isOpen && catTxs.map((t) => (
                     <div key={t.id} style={{ paddingLeft: 22 }}>
-                      <TxRow t={t} showDate onClick={() => onTx(t)} onPin={onPin} />
+                      <TxRow t={t} showDate onClick={() => onTx(t)} />
                     </div>
                   ))}
                   <div style={{ height: 1, background: C.line }} />
@@ -1750,19 +1740,7 @@ export default function App() {
   const deleteRecurring = useCallback(async (id) => {
     await deleteDoc(doc(db, "recurring", id));
   }, []);
-  const toggleFixed = useCallback(async (t) => {
-    if (t.rid) {
-      // 고정(recurring 생성) 항목 → recurring에서 삭제
-      await deleteDoc(doc(db, "recurring", t.rid));
-    } else {
-      // 일반 내역 → recurring으로 등록
-      await addDoc(collection(db, "recurring"), {
-        name: t.memo || t.cat, amount: t.amount, cat: t.cat, day: t.day, who: t.who,
-      });
-    }
-  }, []);
-
-  const addAsset = useCallback(async (a) => {
+const addAsset = useCallback(async (a) => {
     await addDoc(collection(db, "assets"), { ...a, createdAt: serverTimestamp() });
   }, []);
   const updateAsset = useCallback(async (id, a) => {
@@ -1929,9 +1907,9 @@ export default function App() {
       <div style={{ padding: "10px 18px", paddingBottom: `calc(${mode === "money" ? (showQuickBar ? 180 : 90) : 90}px + env(safe-area-inset-bottom, 0px))` }}>
         {mode === "money" && (
           <>
-            {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} appTitle={appTitle} />}
-            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} sel={calSel} onSel={(d) => { setCalSel(d); if (d) setShowQuickBar(true); else setShowQuickBar(false); }} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
-            {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} onPin={toggleFixed} />}
+            {tab === "home" && <Home totals={totals} budget={budget} txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} appTitle={appTitle} />}
+            {tab === "cal" && <MoneyCalendar txs={monthTxs} month={month} year={year} setMonth={setMonth} onTx={openTx} sel={calSel} onSel={(d) => { setCalSel(d); if (d) setShowQuickBar(true); else setShowQuickBar(false); }} onDetail={(dateStr) => { setAddTxDate(dateStr); setShowAdd(true); }} />}
+            {tab === "stats" && <Stats byCat={byCat} totalExpense={totals.expense} prevExpense={prevExpense} txs={monthTxs} allTxs={txs} month={month} year={year} setMonth={setMonth} onTx={openTx} />}
             {tab === "budget" && <Budget budget={budget} setBudget={saveBudget} spent={totals.expense} month={month} recurring={recurring} onAddRecurring={addRecurring} onEditRecurring={setEditRecur} onDeleteRecurring={deleteRecurring} catBudgets={catBudgets} onSaveCatBudget={saveCatBudget} monthTxs={monthTxs} />}
             {tab === "asset" && <Assets assets={assets} txs={txs} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />}
           </>
